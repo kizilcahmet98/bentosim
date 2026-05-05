@@ -6,7 +6,7 @@
 A terminal-based visual simulation engine.
 
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![License: PolyForm NC](https://img.shields.io/badge/license-PolyForm--NC%201.0.0-orange.svg)](LICENSE.md)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE.md)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-yellow.svg)]()
 
 </div>
@@ -31,7 +31,7 @@ Aquarium modülü:
 ### Kurulum
 
 ```bash
-git clone https://github.com/<KULLANICI>/bentosim.git
+git clone https://github.com/kizilcahmet98/bentosim.git
 cd bentosim
 python -m bentosim aquarium
 ```
@@ -63,7 +63,7 @@ python -m bentosim aquarium --fish 18 --fps 60 # balık ve FPS ayarı
 
 ### Lisans
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md) — kişisel, eğitim ve araştırma kullanımı için ücretsiz. Ticari kullanım yasaktır.
+[GNU General Public License v3.0](LICENSE.md) — özgür yazılım. Türev çalışmalar da aynı lisans altında dağıtılmalıdır.
 
 ---
 
@@ -85,7 +85,7 @@ The Aquarium module:
 ### Installation
 
 ```bash
-git clone https://github.com/<USERNAME>/bentosim.git
+git clone https://github.com/kizilcahmet98/bentosim.git
 cd bentosim
 python -m bentosim aquarium
 ```
@@ -117,7 +117,7 @@ python -m bentosim aquarium --fish 18 --fps 60 # tune fish & FPS
 
 ### License
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md) — free for personal, educational, and research use. Commercial use is prohibited.
+[GNU General Public License v3.0](LICENSE.md) — free software. Derivative works must be distributed under the same license.
 
 ---
 

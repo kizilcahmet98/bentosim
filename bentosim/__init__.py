@@ -12,4 +12,4 @@ Kullanım:
 
 __version__ = "0.1.0"
 __author__  = "Bentosim contributors"
-__license__ = "PolyForm Noncommercial 1.0.0"
+__license__ = "GPL-3.0-or-later"

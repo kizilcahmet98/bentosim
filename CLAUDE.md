@@ -5,6 +5,26 @@
 
 ---
 
+## 🚫 ABSOLUTE RULE — DO NOT LEAVE THE PROJECT DIRECTORY
+
+**Working directory:** `/home/kizilcahmet98/dev/bentosim/`
+
+Claude **must not** read, list, stat, write, or otherwise touch any
+path outside this directory. This includes — but is not limited to —
+`~/.ssh/`, `~/.config/`, `~/.gnupg/`, `/etc/`, `/tmp/`, the user's home
+directory, sibling project directories, and any other location not
+under the working tree above.
+
+If a task seems to require something outside the project directory
+(e.g., diagnosing git auth, reading dotfiles, checking system
+binaries), **stop and ask the user first.** The user will explicitly
+override this rule when they want it lifted.
+
+This rule is permanent. Do **not** modify or relax it without an
+explicit instruction from the user saying so.
+
+---
+
 ## 🎯 Project Description
 
 **Name:** Bentosim
@@ -12,8 +32,8 @@
 modules (aquarium, space, ecosystem, etc.), all sharing a common core.
 **Language:** Python 3.7+
 **Dependencies:** None — stdlib only (curses, math, random, json, argparse, pathlib)
-**License:** PolyForm Noncommercial 1.0.0 (free for personal/research/educational
-use, **commercial use prohibited**)
+**License:** GNU General Public License v3.0 or later (free software;
+derivative works must remain under GPLv3+)
 **Target platforms:** Linux / macOS / WSL (Windows requires `windows-curses`)
 **User-facing language:** Turkish (UI labels, menu items, HUD text)
 **Code language:** English (function/variable names, code comments mostly Turkish)
@@ -54,7 +74,7 @@ bentosim/
 │   └── __main__.py            # 'python -m bentosim <module>' dispatcher
 ├── screenshots/               # demo görüntüleri / GIFs
 ├── .github/workflows/         # CI (ileride eklenecek)
-├── LICENSE.md                 # PolyForm Noncommercial 1.0.0
+├── LICENSE.md                 # GNU GPL v3.0
 ├── README.md                  # TR + EN bilingual
 ├── CLAUDE.md                  # bu dosya
 ├── pyproject.toml             # PyPI hazır
