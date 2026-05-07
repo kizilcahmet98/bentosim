@@ -264,8 +264,9 @@ class Shark(Entity):
         self.right = random.random() > 0.5
         self.lines = SHARK_R if self.right else SHARK_L
         self.W = max(len(l) for l in self.lines)
+        self.H = len(self.lines)
         self.x = float(-self.W-12 if self.right else cols+self.W+12)
-        self.base_y = float(random.randint(2, max(3,rows-8)))
+        self.base_y = float(random.randint(2, max(3, rows-self.H-2)))
         self.y  = self.base_y
         self.nom_spd = random.uniform(0.10,0.38) * spd_mult
         self.dx = self.nom_spd * (1 if self.right else -1)
@@ -294,7 +295,7 @@ class Shark(Entity):
             self.hunt_cd = random.randint(25,70)
 
         self.y = lerp(self.y, self.target_y, 0.025)
-        self.y = max(2.0, min(float(rows-7), self.y))
+        self.y = max(2.0, min(float(rows-self.H-1), self.y))
         self.x += self.dx
         if self.x > cols+self.W+20 or self.x < -self.W-20:
             self.dead = True

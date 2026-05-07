@@ -55,12 +55,18 @@ FISH_DB = [(r, _mirror(r), sz, name) for r, sz, name in _FISH_RAW]
 
 # ── Köpekbalığı ──
 SHARK_R = [
-    "         /\\          ",
-    "  _______/  \\______  ",
-    " / · )) ))          >",
-    "(___________________/",
-    "         \\/          ",
+    r"        |\.                                                       ",
+    r"        | \\                                  /\                  ",
+    r"        |  \\                   _____________/  \____________     ",
+    r"        |   \\___       __..---''                           `--._ ",
+    r"        |      ``------''              ___       |||||   o     _.-'>",
+    r"        |   __..---''`--..___________/   \________________..-'    ",
+    r"        |  //_.--'               \______/        \___/            ",
+    r"        | //                       \/          \__/                ",
+    r"        |//                                                        ",
 ]
+_SHARK_W = max(len(line) for line in SHARK_R)
+SHARK_R = [line.ljust(_SHARK_W) for line in SHARK_R]
 SHARK_L = [_mirror(line) for line in SHARK_R]
 
 
