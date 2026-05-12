@@ -53,6 +53,15 @@ class Entity:
         return None
 
 
+def draw_art_spans(win, y, x, lines, spans, attr):
+    """ASCII sanatın sadece opak kabul edilen yatay parçalarını çizer."""
+    y = int(y)
+    x = int(x)
+    for i, (line, row_spans) in enumerate(zip(lines, spans)):
+        for start, end in row_spans:
+            safeadd(win, y + i, x + start, line[start:end], attr)
+
+
 class Fish(Entity):
     SPD = {"S":(0.20,0.50), "M":(0.07,0.30), "L":(0.03,0.12), "X":(0.10,0.28)}
 
@@ -254,6 +263,24 @@ class Fish(Entity):
 #  KÖPEKBALIK
 # ════════════════════════════════════════════════════════════════
 
+SHARK_SPANS_R = [
+    ((8, 11),),
+    ((8, 12), (46, 48)),
+    ((8, 13), (32, 61)),
+    ((8, 65),),
+    ((8, 68),),
+    ((8, 62),),
+    ((8, 18), (33, 41), (49, 54)),
+    ((8, 12), (35, 37), (47, 51)),
+    ((8, 11),),
+]
+SHARK_SPANS_L = [
+    tuple((len(SHARK_R[0]) - end, len(SHARK_R[0]) - start)
+          for start, end in row)
+    for row in SHARK_SPANS_R
+]
+
+
 class Shark(Entity):
     ST_PATROL = 0
     ST_HUNT   = 1
@@ -263,6 +290,7 @@ class Shark(Entity):
         super().__init__()
         self.right = random.random() > 0.5
         self.lines = SHARK_R if self.right else SHARK_L
+        self.spans = SHARK_SPANS_R if self.right else SHARK_SPANS_L
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
         self.x = float(-self.W-12 if self.right else cols+self.W+12)
@@ -302,18 +330,36 @@ class Shark(Entity):
 
     def draw(self, win, theme, t):
         attr = cp(theme["shark"], bold=True)
-        for i,line in enumerate(self.lines):
-            safeadd(win, int(self.y)+i, int(self.x), line, attr)
+        draw_art_spans(win, self.y, self.x, self.lines, self.spans, attr)
 
 # ════════════════════════════════════════════════════════════════
 #  BALİNA
 # ════════════════════════════════════════════════════════════════
+
+WHALE_SPANS_R = [
+    ((10, 15), (45, 50)),
+    ((11, 14), (33, 58)),
+    ((4, 17), (24, 59)),
+    ((10, 60),),
+    ((9, 59),),
+    ((8, 54),),
+    ((7, 52),),
+    ((6, 10),),
+    ((7, 9),),
+]
+WHALE_SPANS_L = [
+    tuple((len(WHALE_R[0]) - end, len(WHALE_R[0]) - start)
+          for start, end in row)
+    for row in WHALE_SPANS_R
+]
+
 
 class Whale(Entity):
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right = random.random() > 0.5
         self.lines = WHALE_R if self.right else WHALE_L
+        self.spans = WHALE_SPANS_R if self.right else WHALE_SPANS_L
         self.W = max(len(l) for l in self.lines)
         self.x = float(-self.W-15 if self.right else cols+self.W+15)
         self.base_y = float(random.randint(3, max(4,rows-9)))
@@ -339,8 +385,7 @@ class Whale(Entity):
 
     def draw(self, win, theme, t):
         attr = cp(theme["whale"], bold=True)
-        for i,line in enumerate(self.lines):
-            safeadd(win, int(self.y)+i, int(self.x), line, attr)
+        draw_art_spans(win, self.y, self.x, self.lines, self.spans, attr)
 
 # ════════════════════════════════════════════════════════════════
 #  DENİZANASI
@@ -661,4 +706,3 @@ class BottomDecor:
             attr=cp(rgb,bold=bold)
             for i,line in enumerate(art):
                 safeadd(win,sy+i,px,line,attr)
-

@@ -72,13 +72,18 @@ SHARK_L = [_mirror(line) for line in SHARK_R]
 
 # ── Balina ──
 WHALE_R = [
-    "        __         ",
-    "       /  \\ ",
-    "  ____/ /\\ \\____  ",
-    " /·               )==>",
-    "(___________________/  ",
-    "      \\/           ",
+    r"          \   /                              __^__",
+    r"           \_/                   __..---'''       `---..__",
+    r"    ><=====/ \___        __..-'''                       `-.",
+    r"          /      ``------''          ___            o      )",
+    r"         /   __..---..__________________________________.-'",
+    r"        /  //          `--.        \____/        \___/",
+    r"       / //               `-.       \/            \_",
+    r"      / //",
+    r"       //",
 ]
+_WHALE_W = max(len(line) for line in WHALE_R)
+WHALE_R = [line.ljust(_WHALE_W) for line in WHALE_R]
 WHALE_L = [_mirror(line) for line in WHALE_R]
 
 
