@@ -11,7 +11,7 @@ from .entities import (
     Eel, MantaRay, Bubble, BottomDecor,
 )
 from .themes import THEMES, THEME_NAMES
-from .hud import draw_hud
+from .hud import draw_hud, hud_height
 from .config import BOUNDS
 
 
@@ -186,7 +186,8 @@ def run_sim(stdscr, cfg):
         # Çizim FPS'e bağlıdır; simülasyon durumunu değiştirmez.
         stdscr.erase()
         env.draw_water_bg(stdscr, rows, cols, t, theme)
-        env.draw_surface(stdscr, t, cols, theme)
+        env.draw_surface(stdscr, t, cols, theme,
+                         top=max(1, hud_height(rows, cfg.get("hud", True))))
         if cfg.get("light_rays"):
             env.draw_light_rays(stdscr, rows, cols, t, theme)
         env.draw_seaweed(stdscr, rows, cols, t, theme)

@@ -18,7 +18,7 @@ Hiyerarşi:
 import math
 import random
 
-from ..core import cp, safeadd, lerp
+from ..core import cp, safeadd, lerp, cell_width
 from .art import (
     FISH_DB,
     SHARK_R, SHARK_L,
@@ -26,7 +26,7 @@ from .art import (
     TURTLE_R, TURTLE_L,
     CRAB_R, CRAB_L,
     OCTOPUS_FRAMES,
-    EEL_R, EEL_L,
+    build_eel_art,
     RAY_R, RAY_L,
     JELLY_FRAMES,
     BUBBLE_CHARS,
@@ -76,6 +76,33 @@ def draw_art_opaque(win, y, x, lines, attr):
                 start = None
         if start is not None:
             safeadd(win, y + row, x + start, line[start:], attr)
+
+
+def draw_art_shape(win, y, x, lines, attr, solid_rows=()):
+    """Dış boşlukları korur; seçili gövde satırlarının içi opak kalır."""
+    y, x = int(y), int(x)
+    for row, line in enumerate(lines):
+        if row in solid_rows:
+            start = len(line) - len(line.lstrip(" "))
+            safeadd(win, y + row, x + start, line.strip(" "), attr)
+        else:
+            draw_art_opaque(win, y + row, x, [line], attr)
+
+
+def clamp_swim_y(y, rows, height):
+    """Üstte iki, dipte üç satır ayırarak yüzme konumunu sınırlar."""
+    return max(2.0, min(float(max(2, rows - 3 - height)), y))
+
+
+def draw_swimming_art(win, y, x, lines, attr, spans=None, solid_rows=()):
+    """Resize sırasında da kumu korur; sığmayan çizimi su alanına kırpar."""
+    rows, _ = win.getmaxyx()
+    y = int(clamp_swim_y(y, rows, len(lines)))
+    visible = max(0, rows - 3 - y)
+    if spans is not None:
+        draw_art_spans(win, y, x, lines[:visible], spans[:visible], attr)
+    else:
+        draw_art_shape(win, y, x, lines[:visible], attr, solid_rows)
 
 
 class Fish(Entity):
@@ -321,7 +348,7 @@ class Shark(Entity):
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
         self.x = float(-self.W-12 if self.right else cols+self.W+12)
-        self.base_y = float(random.randint(2, max(3, rows-self.H-2)))
+        self.base_y = float(random.randint(2, max(2, rows-3-self.H)))
         self.y  = self.base_y
         self.nom_spd = random.uniform(0.10,0.38) * spd_mult
         self.dx = self.nom_spd * (1 if self.right else -1)
@@ -350,14 +377,14 @@ class Shark(Entity):
             self.hunt_cd = random.randint(25,70)
 
         self.y = lerp(self.y, self.target_y, 0.025)
-        self.y = max(2.0, min(float(rows-self.H-1), self.y))
+        self.y = clamp_swim_y(self.y, rows, self.H)
         self.x += self.dx
         if self.x > cols+self.W+20 or self.x < -self.W-20:
             self.dead = True
 
     def draw(self, win, theme, t):
         attr = cp(theme["shark"], bold=True)
-        draw_art_spans(win, self.y, self.x, self.lines, self.spans, attr)
+        draw_swimming_art(win, self.y, self.x, self.lines, attr, self.spans)
 
 # ════════════════════════════════════════════════════════════════
 #  BALİNA
@@ -388,8 +415,9 @@ class Whale(Entity):
         self.lines = WHALE_R if self.right else WHALE_L
         self.spans = WHALE_SPANS_R if self.right else WHALE_SPANS_L
         self.W = max(len(l) for l in self.lines)
+        self.H = len(self.lines)
         self.x = float(-self.W-15 if self.right else cols+self.W+15)
-        self.base_y = float(random.randint(3, max(4,rows-9)))
+        self.base_y = float(random.randint(2, max(2,rows-3-self.H)))
         self.y  = self.base_y
         self.dx = random.uniform(0.025,0.07)*spd_mult*(1 if self.right else -1)
         self.phase = random.uniform(0,math.pi*2)
@@ -398,7 +426,7 @@ class Whale(Entity):
     def update(self, t, rows, cols, spd_mult):
         self.x += self.dx
         self.y = self.base_y + math.sin(t*0.025+self.phase)*0.7
-        self.y = max(2.0, min(float(rows-9), self.y))
+        self.y = clamp_swim_y(self.y, rows, self.H)
         self.spout_cd -= 1
         if self.x > cols+self.W+20 or self.x < -self.W-20:
             self.dead = True
@@ -406,13 +434,14 @@ class Whale(Entity):
     def emit_spout(self):
         if self.spout_cd <= 0:
             self.spout_cd = random.randint(60,140)
-            sx = self.x + self.W//2
+            # Aynalanmış çizimde de hava deliğinin üstünden fışkırır.
+            sx = self.x + self.lines[0].index("^")
             return [Bubble(sx+dx, self.y-1) for dx in range(-2,3)]
         return []
 
     def draw(self, win, theme, t):
         attr = cp(theme["whale"], bold=True)
-        draw_art_spans(win, self.y, self.x, self.lines, self.spans, attr)
+        draw_swimming_art(win, self.y, self.x, self.lines, attr, self.spans)
 
 # ════════════════════════════════════════════════════════════════
 #  DENİZANASI
@@ -451,12 +480,16 @@ class Jellyfish(Entity):
     def draw(self, win, theme, t):
         # Pulsing parlaklık
         bright = (math.sin(self.pulse_t)*0.5+0.5)
-        jc = theme["jelly"]
-        dark_jc = tuple(max(0,int(c*0.4)) for c in jc)
+        # Beş seviye: her karede yeni RGB/pair üretmeden görünür ışıldama.
+        strength = 0.55 + 0.45 * (round(bright * 4) / 4)
+        jc = tuple(int(c * strength) for c in theme["jelly"])
+        # Dokunaçlar koyu kalır; mono temada da ayrı palet tonlarına ulaşır.
+        dark_jc = tuple(int(c * 0.65) for c in jc)
         frame = JELLY_FRAMES[self.frame]
         for i,line in enumerate(frame):
             a = cp(jc, bold=True) if i <= 1 else cp(dark_jc, dim=True)
-            safeadd(win, int(self.y)+i, int(self.x), line, a)
+            draw_art_shape(win, int(self.y)+i, self.x, [line], a,
+                           solid_rows=(0,) if i <= 1 else ())
 
 # ════════════════════════════════════════════════════════════════
 #  KAPLUMBAĞA
@@ -472,8 +505,9 @@ class Turtle(Entity):
         self.right = random.random() > 0.5
         self.lines = TURTLE_R if self.right else TURTLE_L
         self.W = max(len(l) for l in self.lines)
+        self.H = len(self.lines)
         self.x = float(-self.W-8 if self.right else cols+self.W+8)
-        self.base_y = float(random.randint(3, max(4,rows-7)))
+        self.base_y = float(random.randint(2, max(2,rows-3-self.H)))
         self.y = self.base_y
         self.dx = random.uniform(0.02,0.09)*spd_mult*(1 if self.right else -1)
         self.phase = random.uniform(0,math.pi*2)
@@ -495,13 +529,13 @@ class Turtle(Entity):
             self.x += self.dx
         # Su dalgası hareketi
         self.y = self.base_y + math.sin(t*0.045+self.phase)*0.6
-        self.y = max(2.0, min(float(rows-7), self.y))
+        self.y = clamp_swim_y(self.y, rows, self.H)
 
         if self.state == self.ST_RISE and self.base_y > 3:
             self.base_y = lerp(self.base_y, 3.0, 0.01)
         elif self.state == self.ST_SWIM:
             # Orijinal derinliğe geri dön
-            orig = float(random.randint(4,max(5,rows-7)))
+            orig = float(random.randint(2,max(2,rows-3-self.H)))
             self.base_y = lerp(self.base_y, orig, 0.002)
 
         self.bcd -= 1
@@ -511,13 +545,16 @@ class Turtle(Entity):
     def emit_bubble(self):
         if self.bcd <= 0:
             self.bcd = random.randint(20,60)
-            return Bubble(self.x+2, self.y)
+            mouth_row = 2
+            mouth_col = self.lines[mouth_row].index(">" if self.right else "<")
+            # Başın bir satır üstü: kabarcık ağız çizimini örtmeden yükselir.
+            return Bubble(self.x + mouth_col, self.y + mouth_row - 1)
         return None
 
     def draw(self, win, theme, t):
         attr = cp(theme["turtle"], bold=True)
-        for i,line in enumerate(self.lines):
-            safeadd(win, int(self.y)+i, int(self.x), line, attr)
+        draw_swimming_art(win, self.y, self.x, self.lines, attr,
+                          solid_rows=(0, 1, 2, 3, 4))
 
 # ════════════════════════════════════════════════════════════════
 #  YENGEÇ
@@ -566,8 +603,8 @@ class Crab(Entity):
     def draw(self, win, theme, t):
         attr=cp(theme["crab"],bold=True)
         frames=CRAB_R if self.right else CRAB_L
-        for i,line in enumerate(frames[self.frame]):
-            safeadd(win,int(self.y)+i,int(self.x),line,attr)
+        draw_art_shape(win, self.y, self.x, frames[self.frame], attr,
+                       solid_rows=(0, 1))
 
 # ════════════════════════════════════════════════════════════════
 #  AHTAPOT
@@ -607,8 +644,7 @@ class Octopus(Entity):
         col = theme["octo"] if not self.inking else tuple(max(0,c-80) for c in theme["octo"])
         attr=cp(col,bold=True)
         frame=OCTOPUS_FRAMES[self.frame]
-        for i,line in enumerate(frame):
-            safeadd(win,int(self.y)+i,int(self.x),line,attr)
+        draw_art_shape(win, self.y, self.x, frame, attr, solid_rows=(0, 1))
 
 # ════════════════════════════════════════════════════════════════
 #  YILAN BALIĞI
@@ -618,10 +654,9 @@ class Eel(Entity):
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right = random.random()>0.5
-        base = EEL_R[0] if self.right else EEL_L[0]
         # Dinamik uzunluk
         seg = random.randint(2,5)
-        self.art = base * seg if self.right else base * seg
+        self.art = build_eel_art(seg, self.right)
         self.W = len(self.art)
         self.x = float(-self.W-5 if self.right else cols+self.W+5)
         self.base_y = float(random.randint(3,max(4,rows-6)))
@@ -663,8 +698,7 @@ class MantaRay(Entity):
 
     def draw(self, win, theme, t):
         attr=cp(theme["ray_fish"],bold=True)
-        for i,line in enumerate(self.lines):
-            safeadd(win,int(self.y)+i,int(self.x),line,attr)
+        draw_art_shape(win, self.y, self.x, self.lines, attr, solid_rows=(1, 2))
 
 # ════════════════════════════════════════════════════════════════
 #  KABARCIK
@@ -716,7 +750,7 @@ class BottomDecor:
             elif k=="skull":      art=SKULL_ART
             elif k=="anchor":     art=ANCHOR_ART
             else:                 art=ROCK_ART
-            w=max(len(line) for line in art)
+            w=max(cell_width(line) for line in art)
             if cols - w - 2 <= 2:
                 continue
             px=random.randint(2, cols-w-2)

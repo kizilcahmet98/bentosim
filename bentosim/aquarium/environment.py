@@ -33,7 +33,7 @@ def draw_water_bg(win, rows, cols, t, theme):
         safeadd(win, row, 0, line, attr)
 
 
-def draw_surface(win, t, cols, theme):
+def draw_surface(win, t, cols, theme, top=1):
     """Üstte iki katmanlı dalgalı su yüzeyi."""
     a1 = cp(theme["surface"], bold=True)
     a2 = cp(theme["surf2"])
@@ -45,12 +45,15 @@ def draw_surface(win, t, cols, theme):
         elif v > 0.5:  line.append("≈")
         elif v > -0.2: line.append("~")
         else:          line.append("─")
-    safeadd(win, 1, 0, "".join(line), a1)
+    rows, _ = win.getmaxyx()
+    if top < rows - 3:
+        safeadd(win, top, 0, "".join(line), a1)
     line2 = []
     for x in range(cols-1):
         v = math.sin(x*0.12+t*1.1+0.8)
         line2.append("·" if v > 0.7 else " ")
-    safeadd(win, 2, 0, "".join(line2), a2)
+    if top + 1 < rows - 3:
+        safeadd(win, top + 1, 0, "".join(line2), a2)
 
 
 def draw_light_rays(win, rows, cols, t, theme):

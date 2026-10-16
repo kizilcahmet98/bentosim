@@ -7,7 +7,7 @@ flagıyla başta da gösterilebilir.
 
 import curses
 
-from ..core import cp
+from ..core import cp, safeadd, cell_width, clip_cells
 from .themes import THEMES, THEME_NAMES
 from .config import BOUNDS, DEFAULT_CFG
 from .art import (
@@ -42,15 +42,17 @@ def draw_menu_frame(win, rows, cols, theme_name):
         except Exception:
             pass
 
-    title = "B E N T O S I M  ·  A K V A R Y U M   v0.1"
-    sub   = "Ayarlar & Yapılandırma"
-    try:
-        win.addstr(1, max(1, (W-len(title))//2), title, curses.A_BOLD)
-        win.addstr(2, max(1, (W-len(sub))//2),   sub,   curses.A_DIM)
-        sep_w = min(W-4, max(len(title), 30))
-        win.addstr(3, max(1, (W-sep_w)//2), "─"*sep_w, curses.A_DIM)
-    except curses.error:
-        pass
+    inner_width = max(0, W - 2)
+    titles = ("B E N T O S I M  ·  A K V A R Y U M   v0.1",
+              "BENTOSIM · AKVARYUM v0.1", "BENTOSIM")
+    title = next((text for text in titles if cell_width(text) <= inner_width),
+                 clip_cells(titles[-1], inner_width))
+    sub = clip_cells("Ayarlar & Yapılandırma", inner_width)
+    sep_w = min(max(0, W - 4), max(cell_width(title), 30))
+    for row, text, attr in ((1, title, curses.A_BOLD),
+                            (2, sub, curses.A_DIM), (3, "─" * sep_w, curses.A_DIM)):
+        if row < H - 2:
+            safeadd(win, row, max(1, (W - cell_width(text)) // 2), text, attr)
 
 
 def run_menu(stdscr, cfg):

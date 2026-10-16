@@ -15,11 +15,20 @@ _MIRROR_MAP = str.maketrans({
 })
 
 
+def _pad_art(art: str) -> str:
+    """Satırları en geniş satıra tamamlayarak ortak bir tuval oluşturur."""
+    lines = art.split('\n')
+    width = max(map(len, lines))
+    return '\n'.join(line.ljust(width) for line in lines)
+
+
 def _mirror(art: str) -> str:
-    """``_R`` metnini ``_L``'ye çevirir: her satırı ters çevirir, yönlü
-    karakterleri (parantez, slash, ok vs.) eşleniğine takas eder."""
+    """Ortak tuvalin yatay aynası; yönlü karakterleri eşleniğine takas eder.
+
+    İki kez aynalama, girdinin ortak genişliğe tamamlanmış halini verir.
+    """
     return '\n'.join(line.translate(_MIRROR_MAP)[::-1]
-                     for line in art.split('\n'))
+                     for line in _pad_art(art).split('\n'))
 
 
 # ── Balıklar — sağ-yön tek kaynak ──
@@ -50,7 +59,7 @@ _FISH_RAW = [
     (">·>·>·>",          "X", "şerit"),
 ]
 
-FISH_DB = [(r, _mirror(r), sz, name) for r, sz, name in _FISH_RAW]
+FISH_DB = [(_pad_art(r), _mirror(r), sz, name) for r, sz, name in _FISH_RAW]
 
 
 # ── Köpekbalığı ──
@@ -114,7 +123,17 @@ OCTOPUS_FRAMES = [
 
 
 # ── Deniz yılanı / yılan balığı ──
-EEL_R = ["≈§≈§≈§≈§º>"]
+EEL_BODY_R = "≈§≈§≈§≈§"
+EEL_HEAD_R = "º>"
+
+
+def build_eel_art(segments, right=True):
+    """Gövdeyi uzatır, tek kafayı ekler ve tüm şekli gerekirse aynalar."""
+    art = EEL_BODY_R * segments + EEL_HEAD_R
+    return art if right else _mirror(art)
+
+
+EEL_R = [build_eel_art(1)]
 EEL_L = [_mirror(line) for line in EEL_R]
 
 
@@ -125,7 +144,8 @@ RAY_R = [
     "  /----/  ",
     "    ||    ",
 ]
-RAY_L = [_mirror(line) for line in RAY_R]
+RAY_R = _pad_art('\n'.join(RAY_R)).split('\n')
+RAY_L = _mirror('\n'.join(RAY_R)).split('\n')
 
 
 # ── Denizanası (yön ayrımı yok) ──
@@ -167,6 +187,6 @@ TREASURE_ART = [
 
 ROCK_ART   = ["  ╭───╮  ", " ╭╯ · ╰╮ ", " ╰─────╯ "]
 SKULL_ART  = [" ╭─────╮ ", " │ ◉ ◉ │ ", " │  ▲  │ ", " ╰──┬──╯ ", "    │    "]
-ANCHOR_ART = ["   ⚓    ", "  ─┼─   ", "   │    ", "  ╭┴╮   ", " ╭╯ ╰╮  "]
+ANCHOR_ART = ["   O    ", "  ─┼─   ", "   │    ", "  ╭┴╮   ", " ╭╯ ╰╮  "]
 
 BUBBLE_CHARS = ["·", "○", "◦", "°", "∘", "º", "⊙"]
