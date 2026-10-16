@@ -3,7 +3,7 @@
 import argparse
 import curses
 
-from .config import load_cfg, save_cfg, DEFAULT_CFG
+from .config import load_cfg, save_cfg, DEFAULT_CFG, normalize_cfg
 from .menu import run_menu
 from .sim import run_sim
 from .themes import THEME_NAMES
@@ -12,6 +12,7 @@ from .themes import THEME_NAMES
 def _curses_main(stdscr, cfg, start_menu):
     if start_menu:
         cfg = run_menu(stdscr, cfg)
+        save_cfg(cfg)
     while True:
         r = run_sim(stdscr, cfg)
         if r == "menu":
@@ -37,9 +38,12 @@ def run(argv=None):
     cfg = load_cfg()
     if args.reset:        cfg = DEFAULT_CFG.copy()
     if args.theme:        cfg["color_theme"] = args.theme
-    if args.fish:         cfg["fish_count"]  = max(1, min(28, args.fish))
-    if args.fps:          cfg["fps"]         = max(5, min(60, args.fps))
-    if args.speed:        cfg["speed"]       = max(0.1, min(5.0, args.speed))
+    if args.fish is not None:  cfg["fish_count"] = args.fish
+    if args.fps is not None:   cfg["fps"]        = args.fps
+    if args.speed is not None: cfg["speed"]      = args.speed
+    cfg = normalize_cfg(cfg)
+    if args.reset:
+        save_cfg(cfg)
 
     try:
         curses.wrapper(_curses_main, cfg, args.menu)

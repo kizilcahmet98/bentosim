@@ -23,7 +23,7 @@ Aquarium modülü:
 
 - **20 farklı balık** + 9 büyük canlı (köpekbalığı, balina, kaplumbağa, denizanası, yengeç, ahtapot, yılan balığı, manta ray, kabarcık)
 - **AI davranışları** — balıklar köpekbalığından kaçar, sürü halinde yüzer, ekran kenarında 4 fazlı sinematik dönüş yapar
-- **6 renk teması** — `ocean`, `deep`, `coral`, `abyss`, `bioluminescent`, `matrix`
+- **6 renk teması** — `realistic`, `premium`, `pastel`, `tokyo`, `gruvbox`, `mono`
 - **256 renk paleti** ile akıcı RGB
 - **Tam ekran TUI menü** — her ayar tek tuşla değiştirilebilir
 - **Sıfır bağımlılık** — sadece Python standart kütüphanesi
@@ -46,7 +46,7 @@ pip install windows-curses
 ```bash
 python -m bentosim aquarium                    # varsayılan
 python -m bentosim aquarium --menu             # menüyle başlat
-python -m bentosim aquarium --theme abyss      # tema seç
+python -m bentosim aquarium --theme premium    # tema seç
 python -m bentosim aquarium --fish 18 --fps 60 # balık ve FPS ayarı
 ```
 
@@ -77,7 +77,7 @@ The Aquarium module:
 
 - **20 distinct fish** + 9 large creatures (shark, whale, turtle, jellyfish, crab, octopus, eel, manta ray, bubbles)
 - **AI behaviors** — fish flee from sharks, school together, perform a 4-phase cinematic turn at the screen edge
-- **6 color themes** — `ocean`, `deep`, `coral`, `abyss`, `bioluminescent`, `matrix`
+- **6 color themes** — `realistic`, `premium`, `pastel`, `tokyo`, `gruvbox`, `mono`
 - **256-color palette** for smooth RGB
 - **Full-screen TUI menu** — every setting is one keystroke away
 - **Zero dependencies** — Python standard library only
@@ -100,7 +100,7 @@ pip install windows-curses
 ```bash
 python -m bentosim aquarium                    # default
 python -m bentosim aquarium --menu             # start with menu
-python -m bentosim aquarium --theme abyss      # pick a theme
+python -m bentosim aquarium --theme premium    # pick a theme
 python -m bentosim aquarium --fish 18 --fps 60 # tune fish & FPS
 ```
 

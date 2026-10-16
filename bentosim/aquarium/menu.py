@@ -9,7 +9,7 @@ import curses
 
 from ..core import cp
 from .themes import THEMES, THEME_NAMES
-from .config import DEFAULT_CFG
+from .config import BOUNDS, DEFAULT_CFG
 from .art import (
     SHARK_R, WHALE_R, TURTLE_R, RAY_R, EEL_R,
     CRAB_R, OCTOPUS_FRAMES, JELLY_FRAMES,
@@ -56,10 +56,14 @@ def draw_menu_frame(win, rows, cols, theme_name):
 def run_menu(stdscr, cfg):
     rows, cols = stdscr.getmaxyx()
     curses.curs_set(0)
+    # Simülasyondan gelen nonblocking modu kapat; menü tuş beklemeli.
+    stdscr.nodelay(False)
 
+    min_fish, max_fish = BOUNDS["fish_count"]
     menu_items = [
         ("Renk Teması",   "color_theme",  THEME_NAMES,           "Görsel renk paleti"),
-        ("Balık Sayısı",  "fish_count",   list(range(3, 30)),    "Maksimum balık sayısı"),
+        ("Balık Sayısı",  "fish_count",   list(range(min_fish, max_fish + 1)),
+                                                                 "Maksimum balık sayısı"),
         ("Köpekbalığı",   "shark",        [True, False],         "Köpekbalığı etkin mi?"),
         ("Balina",        "whale",        [True, False],         "Balina etkin mi?"),
         ("Kaplumbağa",    "turtle",       [True, False],         "Kaplumbağa etkin mi?"),
@@ -87,7 +91,7 @@ def run_menu(stdscr, cfg):
     while True:
         rows, cols = stdscr.getmaxyx()
         stdscr.erase()
-        draw_menu_frame(stdscr, rows, cols, cfg.get("color_theme", "ocean"))
+        draw_menu_frame(stdscr, rows, cols, cfg.get("color_theme", "realistic"))
 
         panel_w = min(52, cols-4)
         start_r = 5
@@ -177,7 +181,7 @@ def run_menu(stdscr, cfg):
                         rr += 1
                         stdscr.addstr(rr, right_x, "Önizleme:", curses.A_BOLD)
                         rr += 1
-                        theme = THEMES[cfg.get("color_theme", "ocean")]
+                        theme = THEMES[cfg.get("color_theme", "realistic")]
                         col_attr = cp(theme[theme_key], bold=True)
                         avail_cols = max(1, cols - right_x - 1)
                         for line in art:

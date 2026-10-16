@@ -1,30 +1,75 @@
-# Repository Guidelines
+# Bentosim — Agent Instructions
 
-## Project Structure & Module Organization
+## Working rules
 
-Bentosim is a Python 3.7+ terminal simulation package with zero runtime dependencies beyond the standard library. Source code lives in `bentosim/`. Shared engine utilities are in `bentosim/core/`, including color and terminal helpers. The shipped aquarium module is in `bentosim/aquarium/`: `cli.py` handles arguments, `sim.py` runs the curses loop, `entities.py` contains simulation actors, `environment.py` draws the scene, `themes.py` defines palettes, and `art.py` stores ASCII art. `bentosim/__main__.py` dispatches `python -m bentosim <module>`. Screenshots and demo assets belong in `screenshots/`.
+- Stay within this repository. Do not inspect or modify user dotfiles, system configuration or sibling projects unless explicitly authorized by the user.
+- Resolve paths relative to the repository root; do not hard-code a checkout path.
+- Preserve existing user changes and keep edits focused on the requested task.
+- Always use `apply_patch` for file changes.
+- Reply in Turkish unless requested otherwise. Use English identifiers and preserve Turkish user-facing UI text.
+- Preserve the GPL-3.0-or-later license.
+- Keep this single repository-level agent guide aligned with the actual code and workflows.
 
-## Build, Test, and Development Commands
+## Project structure
 
-- `python -m bentosim aquarium` runs the aquarium directly from the checkout.
-- `python -m bentosim aquarium --theme abyss --fish 18 --fps 60` smoke-tests CLI options.
-- `python -m pip install -e .` installs the package locally and exposes the `bentosim` console script.
-- `bentosim aquarium --menu` runs the installed entry point with the full-screen settings menu.
-- `python -m compileall bentosim` performs a quick syntax check without adding dependencies.
-- On Windows, install curses support with `python -m pip install -e ".[windows]"`.
+Bentosim is a Python 3.7+ curses terminal simulation package. The implemented simulation is the aquarium. Runtime code uses the standard library; Windows support uses the optional `windows-curses` extra. Preserve Python 3.7 compatibility and the stdlib-only design unless a dependency is clearly justified.
 
-## Coding Style & Naming Conventions
+- `bentosim/__main__.py`: module dispatcher and console entry point.
+- `bentosim/core/colors.py`: RGB conversion, color-pair cache and blending.
+- `bentosim/core/terminal.py`: safe terminal writes and interpolation.
+- `bentosim/aquarium/cli.py`: arguments and curses/menu lifecycle.
+- `bentosim/aquarium/config.py`: defaults, normalization and JSON persistence.
+- `bentosim/aquarium/sim.py`: input handling, spawning, updates and rendering loop.
+- `bentosim/aquarium/entities.py`: creature behavior and drawing.
+- `bentosim/aquarium/environment.py`: water, lighting and seabed rendering.
+- `bentosim/aquarium/art.py`: creature art and automatic mirroring.
+- `bentosim/aquarium/themes.py`: palettes and theme names.
+- `bentosim/aquarium/menu.py`, `hud.py`: settings UI and status display.
+- `tests/test_aquarium_regressions.py`: unittest regression coverage.
+- `tests/test_fish_count_bounds.py`: menu, keyboard, CLI and persistence checks for fish count bounds.
+- `tests/test_simulation_timing.py`: controlled-clock checks for FPS independence, pause/resume, lifetimes and rendering delays.
+- `screenshots/`: demo assets and capture instructions.
+- `pyproject.toml`: package metadata, compatibility and entry point.
 
-Use four-space indentation and standard Python naming: `snake_case` for functions and variables, `PascalCase` for classes, and uppercase constants such as `DEFAULT_CFG` or `THEME_NAMES`. Keep package code in English identifiers; user-facing aquarium text is Turkish. Preserve the stdlib-only design unless a dependency is clearly justified. For ASCII art, define right-facing forms and let `art.py` mirror them; escape backslashes as `\\`.
+Reusable terminal/engine helpers belong in `core/`; aquarium behavior belongs in `aquarium/`. Other simulation modules are not implemented.
 
-## Testing Guidelines
+## Development commands
 
-No automated test suite is currently committed. For new pure logic, add tests under `tests/` using `unittest` so the zero-dependency policy holds, and run `python -m unittest discover tests`. Prioritize tests for mirror invariants in `art.py`, config bounds, and reusable helpers in `bentosim/core/`. For curses behavior, include a manual smoke check with a small terminal and at least one theme change.
+Run from the repository root. Use `python3` if `python` is unavailable.
 
-## Commit & Pull Request Guidelines
+```sh
+python -m bentosim --help
+python -m bentosim aquarium --help
+python -m bentosim aquarium
+python -m bentosim aquarium --theme premium --fish 18 --fps 60
+python -m bentosim aquarium --menu
+python -m unittest discover -s tests
+python -m compileall -q bentosim
+```
 
-Recent commits use short, descriptive subjects, sometimes in Turkish, for example `Lisans ve README.md düzeltmesi` and `Bentosim v0.1.0 — modular aquarium simulation`. Keep the first line concise and focused on the visible change. Pull requests should include a summary, manual test commands run, linked issues when applicable, and screenshots or terminal captures for visual changes.
+Optional local installation: `python -m pip install -e .`; the installed entry point is `bentosim aquarium`. On Windows, install with `python -m pip install -e ".[windows]"`.
 
-## Agent-Specific Instructions
+Interactive runs require a real terminal. The application reads `~/.config/bentosim/aquarium.json` and can save settings through the menu or `--reset`. For automated checks, mock configuration I/O or redirect `config.CFG_PATH` inside the repository. Do not access the user's real settings without authorization.
 
-Stay within the repository tree. Do not inspect user dotfiles, system config, or sibling projects unless explicitly asked. Do not relax license terms; Bentosim is GPL-3.0-or-later.
+## Implementation conventions
+
+- Use four-space indentation, snake_case functions/variables, PascalCase classes and uppercase constants.
+- Keep behavior, rendering, art data and CLI concerns in their respective modules.
+- Use `core.terminal.safeadd()` for clipped output. Preserve behavior in small terminals and during resizing.
+- Colors are RGB tuples converted by shared helpers. Call `reset_color_cache()` when switching themes.
+- Define directional art in its right-facing form and derive left-facing art with `art._mirror()`. Preserve the public `FISH_DB` tuple shape. Escape backslashes in Python strings.
+- Keep per-frame paths efficient. Preserve monotonic frame timing and consistent movement across FPS settings.
+- `SimulationClock` drives logic at a fixed 30 Hz; FPS controls rendering. Keep entity updates, spawn timers and bubble emission inside simulation steps. Rendering must not consume the behavior RNG. Simulation time freezes while paused; positions are not interpolated between ticks.
+- New themes must provide the same keys as existing palettes and 12 RGB fish colors. Treat `THEMES` and `THEME_NAMES` as the source of truth.
+- Current themes: `realistic` (default), `premium`, `pastel`, `tokyo`, `gruvbox`, `mono`.
+- Normalize configuration through `normalize_cfg()`. Current bounds: fish count 1–28, FPS 5–60, speed 0.1–5.0. Keep CLI, menu and simulation consistent with `BOUNDS`.
+- When adding a creature, check art, entities, spawning, configuration, menu and HUD integration.
+- Register new simulation modules in `bentosim/__main__.py` and provide their CLI entry point.
+
+## Verification and delivery
+
+Use stdlib `unittest` for new logic and regression tests. Existing tests cover configuration normalization, small terminals, theme changes/palettes and fish behavior. Inspect them before extending coverage; test meaningful behavior rather than duplicating implementation.
+
+Run relevant tests for code changes and the full suite when appropriate. Check syntax after editing Python files. Verify mirror invariants for art changes. For curses changes, manually check a small terminal, resizing, menu navigation and at least one theme switch when a real terminal is available. Report checks that could not be performed.
+
+Documentation-only changes do not require running the simulation. Keep README examples aligned with the CLI. Use concise commit subjects. PR descriptions should explain the visible change and validation, with terminal captures for visual changes where practical.

@@ -62,8 +62,25 @@ def draw_art_spans(win, y, x, lines, spans, attr):
             safeadd(win, y + i, x + start, line[start:end], attr)
 
 
+def draw_art_opaque(win, y, x, lines, attr):
+    """Boşlukları şeffaf kabul ederek ASCII sanatı çizer."""
+    y = int(y)
+    x = int(x)
+    for row, line in enumerate(lines):
+        start = None
+        for col, ch in enumerate(line):
+            if ch != " " and start is None:
+                start = col
+            elif ch == " " and start is not None:
+                safeadd(win, y + row, x + start, line[start:col], attr)
+                start = None
+        if start is not None:
+            safeadd(win, y + row, x + start, line[start:], attr)
+
+
 class Fish(Entity):
     SPD = {"S":(0.20,0.50), "M":(0.07,0.30), "L":(0.03,0.12), "X":(0.10,0.28)}
+    MAX_DX = {"S":0.85, "M":0.60, "L":0.35, "X":0.70}
 
     # AI durumları
     ST_SWIM   = 0   # normal yüzme
@@ -82,13 +99,14 @@ class Fish(Entity):
         self.base_y = float(random.randint(2, max(3, rows-5-self.H)))
         self.y  = self.base_y
         lo,hi = self.SPD.get(sz,(0.08,0.28))
-        self.nom_spd = random.uniform(lo,hi) * spd_mult
-        self.dx = self.nom_spd * (1 if self.right else -1)
+        self.nom_spd = random.uniform(lo,hi)
+        self.dx = self.nom_spd * spd_mult * (1 if self.right else -1)
         self.target_dx = self.dx
         self.phase= random.uniform(0, math.pi*2)
         self.amp  = random.uniform(0.1, 0.85)
         self.freq = random.uniform(0.02, 0.10)
-        self.rgb  = random.choice(theme["fish"])
+        self.color_idx = random.randrange(len(theme["fish"]))
+        self.rgb  = theme["fish"][self.color_idx]
         self.bcd  = random.randint(8,40)
         # AI
         self.state    = self.ST_SWIM
@@ -101,6 +119,7 @@ class Fish(Entity):
         self.turn_chance = random.uniform(0.015, 0.04)  # her frame olasılık
         self.school_center = school_center
         self.size_cat = sz
+        self.max_dx = self.MAX_DX.get(sz, 0.70)
 
     def _set_art(self):
         """Yön değişince ASCII sanatını güncelle."""
@@ -108,12 +127,26 @@ class Fish(Entity):
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
 
+    def retheme(self, theme):
+        """Tema değişince balığın rengini yeni palete taşır."""
+        fish_palette = theme["fish"]
+        self.rgb = fish_palette[self.color_idx % len(fish_palette)]
+
     def _do_turn(self):
         """Yönü ters çevir, ASCII sanatını güncelle."""
         self.right = not self.right
         self._set_art()
         self.nom_spd = abs(self.nom_spd)
         self.dx = -self.dx  # anlık hızı da ters çevir
+
+    def _face(self, right):
+        """Panik kaçışta yönü anında günceller."""
+        if self.right == right:
+            return
+        self.right = right
+        self._set_art()
+        self.dx = abs(self.dx) * (1 if self.right else -1)
+        self.target_dx = abs(self.target_dx) * (1 if self.right else -1)
 
     def ai_tick(self, t, rows, cols, spd_mult, sharks):
         self.state_cd -= 1
@@ -124,13 +157,7 @@ class Fish(Entity):
             dist = abs(self.x - sh.x) + abs(self.y - sh.y)
             if dist < 25:
                 self.fear_cd = 80
-                # Köpekbalığı aynı yönden geliyorsa → geri kaç
-                shark_coming = (sh.right and sh.x < self.x) or \
-                               (not sh.right and sh.x > self.x)
-                if shark_coming and self.state != self.ST_TURN:
-                    self.state = self.ST_SPRINT
-                else:
-                    self.state = self.ST_SPRINT
+                self._face(self.x >= sh.x)
                 break
 
         if self.fear_cd > 0:
@@ -171,12 +198,13 @@ class Fish(Entity):
 
         # Hedef hız
         if self.state == self.ST_SPRINT:
-            tspd = self.nom_spd * random.uniform(2.5, 3.5) * spd_mult
+            tspd = self.nom_spd * random.uniform(1.7, 2.35) * spd_mult
         elif self.state == self.ST_IDLE:
             tspd = self.nom_spd * 0.12 * spd_mult
         else:
             tspd = self.nom_spd * random.uniform(0.7, 1.3) * spd_mult
 
+        tspd = min(tspd, self.max_dx * max(0.1, spd_mult))
         self.target_dx = tspd * (1 if self.right else -1)
 
         # Sürü: merkeze doğru çek
@@ -249,8 +277,7 @@ class Fish(Entity):
             attr = cp(dimmed)
         else:
             attr = cp(self.rgb)
-        for i, line in enumerate(self.lines):
-            safeadd(win, int(self.y)+i, int(self.x), line, attr)
+        draw_art_opaque(win, self.y, self.x, self.lines, attr)
 
     def emit_bubble(self):
         if self.bcd <= 0:
@@ -670,11 +697,17 @@ class Bubble(Entity):
 class BottomDecor:
     def __init__(self, cols, rows):
         self.items=[]
-        n=min(16,max(5,cols//8))
-        positions=sorted(random.sample(range(2,cols-10),min(n,cols-14)))
-        pool=["coral"]*5+["star"]*2+["treasure"]*1+["rock"]*2+["skull"]*1+["anchor"]*1+["anemone"]*2
+        if cols < 18 or rows < 10:
+            return
+
+        max_items = min(10, max(3, cols//18))
+        pool=["coral"]*4+["star"]*1+["treasure"]*1+["rock"]*3+["skull"]*1+["anchor"]*1+["anemone"]*2
         random.shuffle(pool)
-        for i,px in enumerate(positions):
+        occupied = []
+
+        for i in range(max_items * 4):
+            if len(self.items) >= max_items:
+                break
             k=pool[i%len(pool)]
             if k=="coral":        art=random.choice(CORAL_DB)
             elif k=="anemone":    art=random.choice(ANEMONE)
@@ -683,8 +716,16 @@ class BottomDecor:
             elif k=="skull":      art=SKULL_ART
             elif k=="anchor":     art=ANCHOR_ART
             else:                 art=ROCK_ART
+            w=max(len(line) for line in art)
+            if cols - w - 2 <= 2:
+                continue
+            px=random.randint(2, cols-w-2)
+            gap=3
+            if any(px < end + gap and px + w > start - gap for start, end in occupied):
+                continue
             y=rows-3-len(art)
             self.items.append((k,px,y,art))
+            occupied.append((px, px+w))
 
     def draw(self, win, theme, t):
         cmap={

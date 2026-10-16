@@ -12,6 +12,7 @@ from ..core import cp, safeadd, blend
 
 
 _sw_h: dict = {}
+_render_rng = random.Random()
 
 
 def init_seaweed(cols, rows):
@@ -54,6 +55,8 @@ def draw_surface(win, t, cols, theme):
 
 def draw_light_rays(win, rows, cols, t, theme):
     """Yüzeyden inen ışık huzmeleri (parça parça parıltı)."""
+    # Aynı simülasyon anını yeniden çizmek ışıkları oynatmaz ve AI RNG'sini tüketmez.
+    _render_rng.seed(int(t * 30))
     attr = cp(theme["ray"], dim=True)
     positions = [int(cols*f) for f in [0.09, 0.23, 0.41, 0.59, 0.74, 0.88]]
     for px in positions:
@@ -61,10 +64,10 @@ def draw_light_rays(win, rows, cols, t, theme):
         w_max = max(1, int(depth*0.07))
         for row in range(2, min(depth, rows-4)):
             fade = (1.0 - row/max(depth, 1))
-            if random.random() < fade*0.10:
+            if _render_rng.random() < fade*0.10:
                 safeadd(win, row, px, "│", attr)
-            if row < depth//2 and random.random() < fade*0.06:
-                for off in random.choices([-1, 1], [0.5, 0.5], k=random.randint(0, w_max)):
+            if row < depth//2 and _render_rng.random() < fade*0.06:
+                for off in _render_rng.choices([-1, 1], [0.5, 0.5], k=_render_rng.randint(0, w_max)):
                     safeadd(win, row, px+off, "·", attr)
 
 

@@ -15,7 +15,7 @@ def _help():
     print("  aquarium    Terminal Akvaryumu")
     print()
     print("Örnek:")
-    print("  python -m bentosim aquarium --theme abyss --fish 18")
+    print("  python -m bentosim aquarium --theme premium --fish 18")
 
 
 def main():

@@ -25,4 +25,5 @@ def draw_hud(win, rows, cols, stats, t, theme, paused, cfg):
         n = stats.get(k, 0)
         if n > 0: parts.append(f"{icon}{n}")
     info = "  " + "  ".join(parts) + f"  tema:{cfg.get('color_theme','?')}  t:{int(t):05d}"
-    safeadd(win, rows-3, 0, info[:cols-1], ha)
+    info_row = 1 if rows > 8 else max(0, rows-3)
+    safeadd(win, info_row, 0, info[:cols-1], ha)

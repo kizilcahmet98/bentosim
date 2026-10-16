@@ -11,9 +11,9 @@ Bu klasör Bentosim modüllerinin ekran görüntüleri ve demo GIF'leri içindir
 ## Adlandırma
 
 ```
-aquarium-ocean.png
-aquarium-abyss.png
-aquarium-bioluminescent.gif
+aquarium-realistic.png
+aquarium-premium.png
+aquarium-tokyo.gif
 aquarium-menu.png
 ```
 
