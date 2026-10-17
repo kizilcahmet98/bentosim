@@ -178,3 +178,23 @@ Bu bulgular kaynak kod ve sahte terminal çizim kontrollerine dayanır. G1–G10
 - Mercan çeşitleri, anemonlar, denizyıldızı, sandık, kaya ve kafatasında doğrudan doğrulanan yapısal hata bulunmadı. Çapa G10 kapsamında.
 - Köpekbalığı ve balinanın çizim maskeleri mevcut sağ/sol şekillerin dolu karakterlerini kaybetmiyor.
 - İnceleme sonunda mevcut 21 otomatik test geçti. Bu sonuç, yukarıdaki açık görsel sorunların doğrulandığı veya çözüldüğü anlamına gelmiyor; düzeltmelere özel regresyon kontrolleri eklenecek.
+
+## Görsel tercih — büyük ve gerçekçi köpekbalığı
+
+Bu görsel değişiklikler ve SVG önizleme 0.2.0 sürümüne dahildir. Paket sürümü,
+menü ve HUD başlıkları 0.2.0 olarak güncellendi; başlıklar `__version__` değerini kullanır.
+
+- [x] Kullanıcının istediği yeni çizim uygulandı ve otomatik kontroller geçti; estetik değerlendirme kullanıcıya ait.
+- Eski düz/dik kuyruk çizgisi kaldırıldı. Uzun gövde, sivri burun, belirgin sırt yüzgeci, beş solungaç yarığı, çatallı kuyruk ve alt yüzgeç içeren 62×9 hücrelik sağ-yön çizim eklendi; sol yön otomatik aynalanıyor.
+- Köpekbalığının opak çizim maskeleri yeni siluete göre güncellendi. Gövde içleri opak, kuyruk/yüzgeç dışındaki alanlar şeffaf.
+- İki yönde tüm dolu karakterlerin maskede kalması, gövde içi ve yüzgeç aralıkları, iki tema, normal/küçük pencere, iki kenardan kırpma ve kumun korunması test edildi. Toplam 51 test, değişen Python dosyalarının sözdizimi kontrolü ve `git diff --check` geçti.
+- Gerçek curses PTY oturumunda iki yön, realistic/premium temaları ve 24×80 / 12×40 boyutları çalıştırıldı; ekranda kalan burun uçlarının doğru hücrede çizildiği kontrol edildi.
+
+## Görsel tercih — özgün balinayı büyütme ve rötuş
+
+- [x] Kullanıcının son yönlendirmesine göre projedeki önceki balina temel alındı; büyütme/rötuş uygulandı ve otomatik kontroller geçti.
+- Özgün balinanın kuyruk, baş ve yüzgeç ayrıntıları korunarak son boyut isteğiyle 80×9 çizim 104×12 yapıldı (%30 daha geniş, %33 daha yüksek). Kavis ve gövde kalınlığı birlikte büyütüldü; göz, hava deliği ve yüzgeçlerin konumu yeni boyuta uyarlandı.
+- Üst siluetteki uzun düz çizgiler kısaltılıp kavisli bir sırt çizgisi oluşturuldu. Son rötuşta çıkış ve iniş parçaları satırlar arasında boşluk bırakmadan birleşecek şekilde hizalandı; tepe bölümü biraz genişletilip başa doğru iniş dengelendi. Hava deliği ve opak maskeler yeni kavisle hizalandı.
+- Opak maskeler yeni genişliğe göre güncellendi; sol yön otomatik aynalanıyor. Fıskiye mevcut dinamik `^` hesabıyla hizasını koruyor.
+- Testler önceki kuyruk ayrıntılarının korunmasını, boyutları, maskelerde karakter kaybı olmamasını, iki yön/tema, kenar kırpması, gövde içi/dış boşluklar, kum ve fıskiye koordinatlarını doğruluyor. Çok kısa pencerelerin kırpma kontrolleri de korunuyor.
+- Toplam 52 test, değişen Python dosyalarının sözdizimi kontrolü ve `git diff --check` geçti. Son 104×12 çizim gerçek curses PTY oturumunda realistic/premium, iki yön ve 30×140 / 12×40 boyutlarında kontrol edildi; görünür tüm çizim karakterleri, kum sınırında kırpma ve hava deliğine hizalı fıskiye üretimi doğrulandı. Kullanıcının terminal fontuyla gözle kontrol yapılmadı.

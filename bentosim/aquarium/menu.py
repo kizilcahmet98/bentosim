@@ -7,6 +7,7 @@ flagıyla başta da gösterilebilir.
 
 import curses
 
+from .. import __version__
 from ..core import cp, safeadd, cell_width, clip_cells
 from .themes import THEMES, THEME_NAMES
 from .config import BOUNDS, DEFAULT_CFG
@@ -43,8 +44,8 @@ def draw_menu_frame(win, rows, cols, theme_name):
             pass
 
     inner_width = max(0, W - 2)
-    titles = ("B E N T O S I M  ·  A K V A R Y U M   v0.1",
-              "BENTOSIM · AKVARYUM v0.1", "BENTOSIM")
+    titles = (f"B E N T O S I M  ·  A K V A R Y U M   v{__version__}",
+              f"BENTOSIM · AKVARYUM v{__version__}", "BENTOSIM")
     title = next((text for text in titles if cell_width(text) <= inner_width),
                  clip_cells(titles[-1], inner_width))
     sub = clip_cells("Ayarlar & Yapılandırma", inner_width)

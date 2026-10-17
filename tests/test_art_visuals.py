@@ -45,6 +45,88 @@ class MirrorAlignmentVisualTests(unittest.TestCase):
                 self.assertEqual(art._mirror(left), right)
 
 
+class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
+    def test_whale_is_larger_than_shark_and_masks_cover_its_whole_shape(self):
+        width, height = len(art.WHALE_R[0]), len(art.WHALE_R)
+        self.assertGreaterEqual(width, 100)
+        self.assertEqual(height, 12)
+        self.assertGreater(width, len(art.SHARK_R[0]))
+        self.assertIn("><=====/", art.WHALE_R[3])
+        self.assertEqual(art.WHALE_R[-2].strip(), "/ //")
+        self.assertEqual(art.WHALE_R[-1].strip(), "//")
+        self.assertEqual(sum(line.count("^") for line in art.WHALE_R), 1)
+        for lines, spans in ((art.WHALE_R, entities.WHALE_SPANS_R),
+                              (art.WHALE_L, entities.WHALE_SPANS_L)):
+            self.assertEqual(len(spans), height)
+            for row, (line, ranges) in enumerate(zip(lines, spans)):
+                covered = set()
+                for start, end in ranges:
+                    self.assertTrue(0 <= start < end <= width)
+                    covered.update(range(start, end))
+                for col, ch in enumerate(line):
+                    if ch != " ":
+                        self.assertIn(col, covered, (row, col, ch))
+
+    def test_masks_cover_outline_and_keep_body_solid_with_clear_fin_gaps(self):
+        width = len(art.SHARK_R[0])
+        self.assertGreaterEqual(width, 60)
+        self.assertGreaterEqual(len(art.SHARK_R), 8)
+        self.assertIn(")))))", "\n".join(art.SHARK_R))
+        for right, lines, spans in ((True, art.SHARK_R, entities.SHARK_SPANS_R),
+                                     (False, art.SHARK_L, entities.SHARK_SPANS_L)):
+            with self.subTest(right=right):
+                self.assertEqual(len(lines), len(spans))
+                for row, (line, ranges) in enumerate(zip(lines, spans)):
+                    covered = set()
+                    for start, end in ranges:
+                        self.assertTrue(0 <= start < end <= width)
+                        covered.update(range(start, end))
+                    for col, ch in enumerate(line):
+                        if ch != " ":
+                            self.assertIn(col, covered, (row, col, ch))
+                gap = 20 if right else width - 1 - 20
+                body = 30 if right else width - 1 - 30
+                self.assertEqual(lines[1][gap], " ")
+                self.assertFalse(any(start <= gap < end for start, end in spans[1]))
+                self.assertEqual(lines[5][body], " ")
+                self.assertTrue(any(start <= body < end for start, end in spans[5]))
+
+    def test_rendered_large_creatures_keep_outline_and_clip_in_small_windows(self):
+        cases = [(cls, right, gap, body)
+                 for cls, gap, body in ((entities.Shark, (1, 20), (5, 30)),
+                                        (entities.Whale, (1, 20), (3, 40)))
+                 for right in (False, True)]
+        for cls, right, gap, body in cases:
+            with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                creature = cls(100, 24, 1.0)
+            for rows, cols in ((24, 100), (12, 40)):
+                for x in (-10, 2, 60):
+                    for theme_name in ("realistic", "premium"):
+                        with self.subTest(creature=cls.__name__, right=right,
+                                          size=(rows, cols), x=x, theme=theme_name):
+                            cells = [list("#" * cols) for _ in range(rows)]
+                            win = mock.Mock()
+                            win.getmaxyx.return_value = (rows, cols)
+
+                            def addstr(row, col, text, attr=0):
+                                cells[row][col:col + len(text)] = text
+
+                            win.addstr.side_effect = addstr
+                            creature.x, creature.y = x, 2
+                            with mock.patch.object(entities, "cp", return_value=0):
+                                creature.draw(win, THEMES[theme_name], 0)
+                            for row, line in enumerate(creature.lines):
+                                for col, ch in enumerate(line):
+                                    if ch != " " and row + 2 < rows - 3 and 0 <= x + col < cols - 1:
+                                        self.assertEqual(cells[row + 2][x + col], ch)
+                            for (row, col), expected in ((gap, "#"), (body, " ")):
+                                if not right:
+                                    col = creature.W - 1 - col
+                                if row + 2 < rows - 3 and 0 <= x + col < cols - 1:
+                                    self.assertEqual(cells[row + 2][x + col], expected)
+                            self.assertTrue(all(ch == "#" for line in cells[-3:] for ch in line))
+
+
 class EelVisualTests(unittest.TestCase):
     def make_eel(self, segments, right):
         with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1), \
@@ -204,7 +286,8 @@ class SwimmingBoundsVisualTests(unittest.TestCase):
     def test_spawned_and_updated_creatures_stay_above_sand(self):
         cases = [(cls, right) for cls in self.CLASSES for right in (False, True)]
         for cls, right in cases:
-            for rows in (14, 24, 40):
+            height = len(getattr(art, cls.__name__.upper() + "_R"))
+            for rows in (height + 5, 24, 40):
                 with self.subTest(creature=cls.__name__, rows=rows, right=right):
                     # En derin doğma konumunu seç.
                     with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1), \

@@ -1,5 +1,6 @@
 """bentosim.aquarium.hud — üst başlık ve istatistik satırı."""
 
+from .. import __version__
 from ..core import cp, safeadd, cell_width, clip_cells
 
 
@@ -26,8 +27,8 @@ def draw_hud(win, rows, cols, stats, t, theme, paused, cfg):
                   clip_cells(statuses[-1], width))
     status_x = width - cell_width(status)
     title_room = max(0, status_x - 1)
-    titles = ("◈ B E N T O S I M  ·  A K V A R Y U M  v0.1 ◈",
-              "BENTOSIM · AKVARYUM v0.1", "BENTOSIM")
+    titles = (f"◈ B E N T O S I M  ·  A K V A R Y U M  v{__version__} ◈",
+              f"BENTOSIM · AKVARYUM v{__version__}", "BENTOSIM")
     title = next((s for s in titles if cell_width(s) <= title_room), "")
     safeadd(win, 0, max(0, (title_room - cell_width(title)) // 2), title, ta)
     safeadd(win, 0, status_x, status, ha)

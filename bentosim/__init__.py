@@ -10,6 +10,6 @@ Kullanım:
     $ python -m bentosim aquarium
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__  = "Bentosim contributors"
 __license__ = "GPL-3.0-or-later"

@@ -2,6 +2,14 @@
 
 Bu klasör Bentosim modüllerinin ekran görüntüleri ve demo GIF'leri içindir.
 
+## Çizim önizlemesi
+
+[Balina önizlemesi](whale-preview.svg), mevcut 104×12 ASCII çizimini `realistic`
+temasının renkleriyle gösterir. Sabit hücre yerleşimi çizimin satır sonlarında
+kaymasını önler; SVG yakınlaştırılabilir. Beş baloncuğun konumu balinanın
+`emit_spout()` hesabından alınmıştır. Bu dosya koddan üretilmiş statik bir
+önizlemedir; terminal ekran görüntüsü değildir ve çizim değişirse güncellenmelidir.
+
 ## Önerilen format
 
 - **Görüntüler:** PNG, ≤ 1MB
