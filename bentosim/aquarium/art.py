@@ -98,6 +98,20 @@ _WHALE_W = max(len(line) for line in WHALE_R)
 WHALE_R = [line.ljust(_WHALE_W) for line in WHALE_R]
 WHALE_L = [_mirror(line) for line in WHALE_R]
 
+# Menü paneli için tam silueti gösteren küçük çizimler.
+SHARK_PREVIEW = [
+    "          /\\",
+    " ><______/  \\____",
+    "  \\      ))) o  _>",
+    "   `---._____.-'",
+]
+WHALE_PREVIEW = [
+    "          __^___",
+    " ><__..-''      `-.",
+    "    `--.____ o    _)",
+    "           \\___/-'",
+]
+
 
 # ── Deniz kaplumbağası ──
 TURTLE_R = [

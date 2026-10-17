@@ -2,6 +2,12 @@
 
 Bu liste davranış ve görsel incelemelerde bulunan sorunları ve düzeltmelerin kabul ölçütlerini içerir. Her adım tamamlandığında durumu ve doğrulama sonucu burada güncellenir.
 
+Güncel durum: R1–R5, Z1–Z4 ve R3 ek kontrolü tamamlandı; açık teknik madde yok.
+Son doğrulamada 67 test geçti. Eski bölümlerdeki test sayıları ve bekleyen
+kontrol ifadeleri ilgili adımın tarihsel kaydıdır; güncel sonuçlar dosyanın
+sonundadır. Curses hücre kontrolleri yapıldı; kullanıcı terminalinin fontuyla
+estetik değerlendirme ayrı tutulur.
+
 ## 1. Menüde gereksiz CPU tüketimi
 
 - [x] Düzeltildi; otomatik testler ve kullanıcının gerçek terminal kontrolü tamamlandı.
@@ -198,3 +204,118 @@ menü ve HUD başlıkları 0.2.0 olarak güncellendi; başlıklar `__version__` 
 - Opak maskeler yeni genişliğe göre güncellendi; sol yön otomatik aynalanıyor. Fıskiye mevcut dinamik `^` hesabıyla hizasını koruyor.
 - Testler önceki kuyruk ayrıntılarının korunmasını, boyutları, maskelerde karakter kaybı olmamasını, iki yön/tema, kenar kırpması, gövde içi/dış boşluklar, kum ve fıskiye koordinatlarını doğruluyor. Çok kısa pencerelerin kırpma kontrolleri de korunuyor.
 - Toplam 52 test, değişen Python dosyalarının sözdizimi kontrolü ve `git diff --check` geçti. Son 104×12 çizim gerçek curses PTY oturumunda realistic/premium, iki yön ve 30×140 / 12×40 boyutlarında kontrol edildi; görünür tüm çizim karakterleri, kum sınırında kırpma ve hava deliğine hizalı fıskiye üretimi doğrulandı. Kullanıcının terminal fontuyla gözle kontrol yapılmadı.
+
+## 0.2.0 sonrası sade proje incelemesi
+
+Bu dört bulgu ilk incelemede kontrollü senaryolarla yeniden üretildi. O sırada
+52 test geçiyordu; bu davranışlar henüz kapsamda değildi. Maddeler aşağıda
+belirtilen küçük, yerel düzeltmelerle tamamlandı.
+
+### R1. Balık sayısını azaltma mevcut canlı sayısını düşürmüyor — P2
+
+- [x] Düzeltildi ve regresyon testi geçti.
+- Konum: `sim.py` klavye kontrolü ve balık listesinin güncellenmesi.
+- Kanıt: 12 balıkla başlayıp `-` tuşuyla ayar 1'e indirildi; gerçek canlı güncellemeleriyle geçen 10 saniye sonunda hâlâ 12 balık vardı. Yalnızca yeni doğumlar engelleniyor.
+- Kabul: Azaltılan sınır mevcut balık listesine de uygulanmalı; klavye sınırları ve normal doğum davranışı korunmalı.
+- Uygulama: `-` tuşu mevcut balık listesini yeni sınıra indiriyor. Çalışan/duraklatılmış durumda 3→2→1 canlı, ardından `+` ile doğum bekleyen 2 sınırı doğrulandı.
+
+### R2. Yengeçte koşu sonrası hız çarpanı iki kez uygulanıyor — P2
+
+- [x] Düzeltildi ve regresyon testi geçti.
+- Konum: `entities.py::Crab.__init__`, `Crab.update`.
+- Kanıt: Sabit taban hızla `0.5×` ayarında normal hız 0.05'ten 0.025'e, `2×` ayarında 0.2'den 0.4'e değişiyor. `nom_spd` zaten çarpan içerirken koşu bitiminde tekrar çarpılıyor.
+- Kabul: Koşu bittiğinde, yön ve hız ayarı aynı kaldığı sürece başlangıçtaki normal hıza dönmeli.
+- Uygulama: `nom_spd` çarpansız taban hız olarak tutuluyor. 0.1/0.5/1/2/5 hızlarında, iki yönde ve art arda üç koşuda normal hızın geri gelmesi doğrulandı.
+
+### R3. Duraklatılmışken küçültme balıkları kumun üstüne çiziyor — P2
+
+- [x] Düzeltildi ve regresyon testi geçti.
+- Konum: `entities.py::Fish.draw`, `sim.py` pencere boyutu değişimi.
+- Kanıt: Güncelleme yapılmadan 24'ten 12 satıra küçültüldüğünde iki satırlık balık 8–9. satırlara çizildi; kum alanı 9. satırda başlıyor.
+- Kabul: Balık çizimi de yüzme alanına kırpılmalı; duraklatma ve güncellemesiz çizim karelerinde kum korunmalı.
+- Uygulama: `Fish.draw()` mevcut `draw_swimming_art()` yardımcısını kullanıyor. Tüm balık çizimleri, iki yön, dört pencere boyutu ve çizim sırasında durumun değişmemesi doğrulandı.
+
+### R4. Menüde büyük canlıların önizlemesi kesiliyor — P2
+
+- [x] Düzeltildi ve regresyon testi geçti.
+- Konum: `menu.py::run_menu` önizleme paneli.
+- Kanıt: 120×40 terminalde 104 sütunluk balinanın yalnızca ilk 63 sütunu çiziliyor; göz ve baş görünmüyor.
+- Kabul: Menü için alana sığan küçük bir önizleme kullanılmalı veya tam şekil sığmadığında anlaşılır bir gösterim seçilmeli; başı kesilmiş çizim sunulmamalı.
+- Uygulama: Balina ve köpekbalığına dört satırlık küçük menü çizimleri eklendi. Önizleme yalnızca tamamı yatay/dikey sığıyorsa çiziliyor; alt yardım satırına taşma da engellendi. 24×80 ve 40×120'de tam şekil, 18×80'de kısmi çizimin yapılmaması doğrulandı.
+
+## Zemin ve dip objeleri incelemesi — 0.2.0
+
+Kum katmanları, yosunlar, mercan çeşitleri, anemonlar, denizyıldızı, sandık,
+kaya, kafatası, çapa ve yengecin yerleşimi incelendi. Aşağıdaki bulgular mevcut
+çizim yardımcıları ve küçük yerleşim düzeltmeleriyle tamamlandı.
+
+### Z1. Dekorların dış ve dal boşlukları arkadaki yosunu siliyor — P2
+
+- [x] Düzeltildi ve regresyon testleri geçti.
+- Konum: `entities.py::BottomDecor.draw`, özellikle tüm satırı boşluklarla çizen `safeadd()` çağrısı.
+- Kanıt: 16×40 pencerede gerçek `draw_seaweed()` çıktısının 11. satır, 11. sütunundaki `(` karakteri, mercanın dal aralığındaki boşluk çizilince ` ` oldu. Hücre kum sınırının üstünde; silinme kuma ait değil.
+- Kabul: Dış boşluklar ve açık dal aralıkları saydam olmalı. Sandık/kaya gibi kapalı şekillerin gövde içleri opak kalmalı; mevcut `draw_art_shape()` yaklaşımı yeterli.
+- Uygulama: Dekorlar `draw_art_shape()` ile çiziliyor. Sandık/kaya/kafatasının kapalı içleri opak tutuldu. Gerçek yosun/mercan çakışması ile tüm dekor çeşitlerinin dış boşlukları ve kapalı içleri altı temada doğrulandı.
+
+### Z2. Duraklatılmışken yeniden boyutlandırmada yengeç zeminden kopuyor — P2
+
+- [x] Düzeltildi ve regresyon testi geçti.
+- Konum: `entities.py::Crab.draw`, `Crab.update` ve `sim.py` pencere boyutu değişimi.
+- Kanıt: 24 satırlık ekranda yengeç 20–21. satırlarda, ayakları kumun ilk satırında. Güncelleme yapılmadan 32 satıra büyütülünce kum 29. satıra taşınırken yengeç 20–21'de kalıyor. 12 satıra küçültülünce yengeç tamamen görünmez oluyor.
+- Kabul: Yengecin zemine göre çizim yüksekliği güncel pencere boyutundan alınmalı; duraklatma simülasyon durumunu ilerletmeden doğru zeminde gösterilmeli. R3 aynı yeniden boyutlandırma sınıfının balıklardaki ayrı etkisidir.
+- Uygulama: Çizim konumu güncel zemin ve yatay sınırlardan hesaplanıyor. 32×80→12×20→24×80 değişiminde ayakların kumda kalması, görünürlük ve canlı durumunun değişmemesi doğrulandı. Önceki saydamlık testi de yengecin zemine bağlı çizim konumuna uyarlandı.
+
+### Z3. Kısa pencerelerde yüksek dekorlar su yüzeyini örtüyor — P3
+
+- [x] Düzeltildi ve regresyon testleri geçti.
+- Konum: `entities.py::BottomDecor.__init__`, dekor yüksekliğine göre yerleşim.
+- Kanıt: Varsayılan HUD açıkken yüzey 2–3. satırlarda. Rastgelelik tohumu 0 ile çapanın başlangıcı 10 satırlık pencerede 2, 11 satırlık pencerede 3 oldu; başındaki `O` su yüzeyinin üstüne çizildi. 12 satırda başlangıç 4 ve yüzeyin altında kalıyor.
+- Kabul: Kullanılabilir su yüksekliğine sığmayan yüksek dekorlar seçilmemeli veya uygun küçük şekil kullanılmalı. Genişlik kontrolü gibi basit bir yükseklik kontrolü yeterli.
+- Uygulama: `BottomDecor` kullanılabilir suyun üst sınırını alıyor ve yüksekliği sığmayan şekilleri atlıyor. Simülasyon bu sınırı HUD/yüzey alanından başlangıçta ve yeniden boyutlandırmada hesaplıyor. Son kontrolde aynı sınırın yosunlar için de gerekli olduğu görüldü ve uygulandı. HUD açık/kapalı durumdaki su sınırları ve kısa pencereler doğrulandı.
+
+### Doğrulama ve sağlam kalan noktalar
+
+- Üç bulgu `realistic` ve `premium` temalarında gerçek curses penceresinin hücreleri kontrol edilerek yeniden üretildi. Bu, kullanıcı terminal fontunun estetik değerlendirmesi değildir.
+- 10/11/12/24/40 satır, 18/20/40/80/120/160 sütun ve 30 rastgelelik tohumu ile 900 yerleşim kontrol edildi. Sabit dekorların son satırı kumun hemen üstünde; yatay sınırlar ve aralarında üç hücre boşluk korunuyor.
+- Kumun üç katmanının satırları ve normal boyuttaki sabit dekorların zemine hizası için ek bir hata saptanmadı. Yengecin hız sorunu yukarıdaki R2'de kayıtlı; burada tekrarlanmadı.
+- Mevcut 52 test geçti. Bu incelemede uygulama kodu değiştirilmedi; yeni bulgular kabul ölçütleriyle kayıt altına alındı.
+
+### Z4. Zeminin görsel tasarımını yenileme — görsel tercih
+
+- [x] Doğal kum görünümü uygulandı; otomatik ve curses kontrolleri geçti. Estetik değerlendirme kullanıcıya ait.
+- Konum: `environment.py::draw_sand` ve temalardaki kum renkleri.
+- Eski görünüm: Dalgalı üst çizginin altında kesintisiz `▄` ve `█` şeritleri vardı.
+- Uygulama: Dolu bloklar ince bir `_`/`.`/`-` sınırı ve seyrek `.`/`,`/`:` dokusuyla değiştirildi. Alt iki satırda mevcut kum renkleri karıştırılarak yumuşak geçiş sağlandı. Doku zamana bağlı kaymıyor ve davranış rastgeleliğini tüketmiyor. Üç satırlık dip alanı ve temas yükseklikleri korundu.
+- Kabul: Seçilen görünüm bir önizlemeyle değerlendirilmeli; dip alanı, dekorların kuma teması, yengecin ayak hizası ve küçük terminal davranışı korunmalı.
+- Önizleme: [Zemin önce/sonra](screenshots/seabed-before-after.svg). Aynı dekor yerleşiminde yalnızca kum çizimi karşılaştırılır; görsel statik olarak çizim kodundan üretildi.
+
+## Uygulama sonrası son inceleme
+
+- İlerleme sırası: Z4 doğal kum ve ilk kontrol → R1 → R2 → R3 → R4 → Z1 → Z2 → Z3. Yukarıdaki sekiz madde tamamlandı.
+- `python3 -m unittest discover -s tests`: 63 test geçti. Tüm Python kaynakları derleme yapılarak sözdizimi açısından kontrol edildi; `git diff --check` geçti.
+- Gerçek curses PTY oturumunda menü gezinmesi, tema değişimi, küçük/tam menü önizlemeleri, canlı sayısını azaltma, duraklatma/devam ve 24×80→12×40→32×120 boyut değişimi doğrulandı.
+- Altı temada 10×40 / 12×40 / 24×80 / 32×120 ekranlarda HUD açık/kapalı zemin ve dekor yerleşimi, yengecin ayakları, balık çiziminin kumu koruması ve iki yönde balina hava deliği/kabarcık hizası kontrol edildi.
+- Son incelemede daraltılan pencerenin yatay sınırı da yengeç çizimine uygulandı. Bu kapsamda doğrulanmış başka açık hata kalmadı; kullanıcı terminalinin fontuyla estetik kontrol yapılmadı.
+
+## R3 ek kontrolü — kalan yüzücülerde yeniden boyutlandırma
+
+- [x] Denizanası, ahtapot, yılan balığı ve mantadaki aynı çizim sınırı eksikliği düzeltildi.
+- Kanıt: Eski derinlik korunarak güncellemesiz çizimde bu canlılar kısa pencerenin kumuna taşıyor veya küçültme sonrasında görünmez kalıyordu. Önceki R3 düzeltmesi yalnızca balıkları kapsıyordu.
+- Uygulama: Ahtapot, yılan balığı ve manta mevcut `draw_swimming_art()` yardımcısına geçirildi. Satır başına farklı renk kullanan denizanasında aynı dikey sınır ve kumda kırpma uygulandı. Çizim canlı durumunu değiştirmiyor; animasyon ve renk hesapları korundu.
+- Doğrulama: Tüm animasyon kareleri, yönlü türlerde iki yön, iki eski derinlik, beş pencere boyutu ve iki temada kumun korunması, yeniden görünürlük ve duraklatılmış durumun değişmemesi test edildi. Aynı senaryolar gerçek curses PTY hücreleriyle de doğrulandı.
+- Sonuç: 64 test, tüm Python kaynaklarının sözdizimi ve `git diff --check` geçti. Diğer kayıtlı maddeler kapalı kalıyor; yeni açık iş eklenmedi.
+
+## R5. Köpekbalığı ve balinanın geç görünmesi ve seyrek dönmesi — P2
+
+- [x] Giriş/çıkış sınırları düzeltildi; regresyon ve gerçek curses kontrolleri geçti.
+- Konum: `entities.py::Shark.__init__/update`, `Whale.__init__/update`; `sim.py` doğum sayaçları ve tür başına sınırlar.
+- Kanıt: 24×80, hız 1.0, iki yön ve hız aralıklarının alt/üst uçlarında gerçek güncelleme/çizim fonksiyonlarıyla ilk/son görünür kare ve ölüm zamanı ölçüldü. Kullanıcının kayıtlı ayarlarına erişilmedi.
+- İlk doğum beklemesi köpekbalığında 8.7–18.7, balinada 23.3–50 saniye. Bu süreye ekran dışındaki giriş yolu da ekleniyor.
+- Köpekbalığında doğumdan görünürlüğe ek süre sağa giderken 1.1–4, sola giderken 6.6–25 saniye. Balinada sağa 7.2–20, sola 57.2–160 saniye. Başlangıçta balinanın görünmesi toplamda yaklaşık 30–210 saniye sürebiliyor.
+- Çıkış sınırı da gereğinden uzak: Balina görünmez olduktan sonra sağa giderken 62.4–174.7, sola giderken 12.4–34.7 saniye daha canlı listesinde kalıyor. Tek balina sınırı nedeniyle yenisi bu sürede doğamıyor. Köpekbalığında aynı etki daha kısa sürelerle var.
+- Uygulama: İki türün opak çizim maskelerinden sol/sağ sınırları başlangıçta hesaplanıyor. İlk konum, çizimin uç hücresi ekranın hemen dışında olacak şekilde iki yönde de ayarlanıyor. Çıkış kontrolü çizimle aynı `int(x)` konumunu ve son terminal sütunu ayrımını kullanıyor; hareket yönündeki son parça çıkınca canlı aynı simülasyon adımında listeden düşüyor.
+- Kabul: Etkin canlılar iki yönden benzer kısa giriş süresinde görünmeli; tamamen çıkan canlılar yeni doğumu uzun süre engellememeli. Kapalı tür ayarları, FPS bağımsızlığı ve balinanın hava deliği/kabarcık hizası korunmalı.
+- Önce/sonra: 24×80, hız 1.0 ve hareket hızının alt/üst uçlarında iki yönde ilk görünme ek beklemesi köpekbalığında 1.1–25 saniyeden, balinada 7.2–160 saniyeden tek simülasyon adımına (0.033 saniye) indi. Son görünür kareden canlı listesinden düşmeye kadar süre de tek adıma indi; görünmez halde uzun süre slot tutma kalktı.
+- Doğum sayaçları bu tek düzeltmenin kapsamında değiştirilmedi: ilk köpekbalığı yaklaşık 9–19, ilk balina 23–50 saniye sonra görünür. Bu bekleme, giriş mesafesinden kaynaklanan ek gecikmeden ayrıdır.
+- Testler: 40/80/120 sütunlarda iki yön, 0.1/1/5 hız ayarları, doğum anında ekran dışında olma, ilk adımda görünme, görünürken erken silinmeme ve son parçayla birlikte slotun bırakılması doğrulandı. Gerçek simülasyon döngüsünde çıkan balinanın yerine yenisinin doğabilmesi ve kapalı balina ayarında doğum yapılmaması test edildi.
+- Sonuç: 67 test, tüm Python kaynaklarının sözdizimi ve `git diff --check` geçti. Gerçek curses PTY oturumunda 24×80 / 12×40, realistic/premium ve iki yönde ilk giriş, tam çıkış ve balinanın hava deliğine hizalı kabarcıkları doğrulandı. Doğum aralıklarının daha da kısaltılması ayrı bir görsel sıklık tercihidir.

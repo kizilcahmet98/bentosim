@@ -74,7 +74,7 @@ def draw_light_rays(win, rows, cols, t, theme):
                     safeadd(win, row, px+off, "·", attr)
 
 
-def draw_seaweed(win, rows, cols, t, theme):
+def draw_seaweed(win, rows, cols, t, theme, top=4):
     """Sallayan deniz yosunu — pozisyonlar global cache'te tutulur."""
     if not _sw_h:
         init_seaweed(cols, rows)
@@ -85,7 +85,7 @@ def draw_seaweed(win, rows, cols, t, theme):
         if px >= cols: continue
         for drow in range(h):
             row = rows-3-drow
-            if row < 2: continue
+            if row < top: continue
             sway = math.sin(t*0.82+px*0.27+drow*0.95)
             ch = ")" if sway > 0.28 else ("(" if sway < -0.28 else "|")
             off = int(sway*1.4)
@@ -94,14 +94,18 @@ def draw_seaweed(win, rows, cols, t, theme):
 
 
 def draw_sand(win, rows, cols, t, theme):
-    """Üç katmanlı kum: dalgalı çizgi + ▄ + █."""
+    """İnce kum sınırı ve zamana bağlı oynamayan seyrek dip dokusu."""
     at = cp(theme["sand"])
-    am = cp(theme["sand2"], bold=True)
-    ab = cp(theme["sand3"], bold=True)
-    ripple = []
+    am = cp(blend(theme["sand"], theme["sand2"], 0.5))
+    ab = cp(blend(theme["sand2"], theme["sand3"], 0.5), dim=True)
+    edge, grains, depth = [], [], []
     for x in range(cols-1):
-        v = math.sin(x*0.19+t*0.20) + 0.45*math.sin(x*0.07+t*0.12)
-        ripple.append("~" if v > 0.55 else ("." if v > -0.1 else "_"))
-    safeadd(win, rows-3, 0, "".join(ripple), at)
-    safeadd(win, rows-2, 0, "▄"*(cols-1), am)
-    safeadd(win, rows-1, 0, "█"*(cols-1), ab)
+        v = math.sin(x*0.23) + 0.35*math.sin(x*0.071)
+        edge.append("_" if v < -0.25 else ("." if v < 0.35 else "-"))
+        grain = ((x * 37) ^ (x // 7 * 13)) % 53
+        grains.append("." if grain < 10 else ("," if grain < 13 else (":" if grain == 21 else " ")))
+        grain = ((x * 29 + 17) ^ (x // 5 * 11)) % 59
+        depth.append("." if grain < 14 else ("," if grain < 18 else " "))
+    safeadd(win, rows-3, 0, "".join(edge), at)
+    safeadd(win, rows-2, 0, "".join(grains), am)
+    safeadd(win, rows-1, 0, "".join(depth), ab)

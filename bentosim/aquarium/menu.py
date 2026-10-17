@@ -12,15 +12,15 @@ from ..core import cp, safeadd, cell_width, clip_cells
 from .themes import THEMES, THEME_NAMES
 from .config import BOUNDS, DEFAULT_CFG
 from .art import (
-    SHARK_R, WHALE_R, TURTLE_R, RAY_R, EEL_R,
+    SHARK_PREVIEW, WHALE_PREVIEW, TURTLE_R, RAY_R, EEL_R,
     CRAB_R, OCTOPUS_FRAMES, JELLY_FRAMES,
 )
 
 
 # Canlı toggle'ları için önizleme: (art lines, tema renk anahtarı)
 PREVIEW_ART = {
-    "shark":     (SHARK_R,           "shark"),
-    "whale":     (WHALE_R,           "whale"),
+    "shark":     (SHARK_PREVIEW,     "shark"),
+    "whale":     (WHALE_PREVIEW,     "whale"),
     "turtle":    (TURTLE_R,          "turtle"),
     "jellyfish": (JELLY_FRAMES[0],   "jelly"),
     "crab":      (CRAB_R[0],         "crab"),
@@ -180,17 +180,16 @@ def run_menu(stdscr, cfg):
                 # Canlı toggle'ında ASCII önizleme
                 if key in PREVIEW_ART:
                     art, theme_key = PREVIEW_ART[key]
-                    if rr + 1 + len(art) <= rows - 3:
+                    avail_cols = max(0, cols - right_x - 1)
+                    art_width = max(cell_width(line) for line in art)
+                    if rr + 2 + len(art) <= rows - 3 and art_width <= avail_cols:
                         rr += 1
                         stdscr.addstr(rr, right_x, "Önizleme:", curses.A_BOLD)
                         rr += 1
                         theme = THEMES[cfg.get("color_theme", "realistic")]
                         col_attr = cp(theme[theme_key], bold=True)
-                        avail_cols = max(1, cols - right_x - 1)
                         for line in art:
-                            if rr >= rows - 3:
-                                break
-                            stdscr.addstr(rr, right_x, line[:avail_cols], col_attr)
+                            safeadd(stdscr, rr, right_x, line, col_attr)
                             rr += 1
             except curses.error:
                 pass

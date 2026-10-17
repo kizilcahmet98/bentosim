@@ -32,6 +32,8 @@ Bentosim is a Python 3.7+ curses terminal simulation package. The implemented si
 - `tests/test_art_transparency.py`: patterned-background checks for transparent exterior/limb gaps and opaque body interiors.
 - `tests/test_hud_layout.py`: header/control layout and narrow-terminal regression checks.
 - `tests/test_terminal_width.py`: Unicode cell widths, clipping, combining marks, anchor alignment and emoji HUD bounds.
+- `tests/test_seabed.py`: stable sand texture, swimmer clipping, crab speed/resize and decor transparency/height checks.
+- `tests/test_large_creature_lifecycle.py`: shark/whale entry, exit, replacement and disabled-spawn checks.
 - `screenshots/`: demo assets and capture instructions.
 - `pyproject.toml`: package metadata, compatibility and entry point.
 

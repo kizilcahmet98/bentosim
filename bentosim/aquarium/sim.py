@@ -54,6 +54,7 @@ def run_sim(stdscr, cfg):
 
     theme = THEMES[cfg.get("color_theme", "realistic")]
     rows, cols = stdscr.getmaxyx()
+    water_top = max(1, hud_height(rows, cfg.get("hud", True))) + 2
     spd = cfg.get("speed", 1.0)
 
     school_c = (cols//2, rows//2) if cfg.get("schooling") else None
@@ -62,7 +63,7 @@ def run_sim(stdscr, cfg):
                for _ in range(min(cfg.get("fish_count", 12), max(3, cols//9)))]
     sharks  = []; whales = []; jellies = []; turtles = []
     crabs   = []; octos = []; eels = []; mantas = []; bubbles = []
-    bottom  = BottomDecor(cols, rows)
+    bottom  = BottomDecor(cols, rows, water_top=water_top)
     env.init_seaweed(cols, rows)
 
     t = 0.0
@@ -101,6 +102,7 @@ def run_sim(stdscr, cfg):
             cfg["fish_count"] += 1
         if key == ord('-') and cfg["fish_count"] > BOUNDS["fish_count"][0]:
             cfg["fish_count"] -= 1
+            fishes = fishes[:cfg["fish_count"]]
         if key == ord('f'):
             fps_opts = [15, 20, 30, 45, 60]
             cur = cfg.get("fps", 30)
@@ -111,7 +113,8 @@ def run_sim(stdscr, cfg):
         new_r, new_c = stdscr.getmaxyx()
         if (new_r, new_c) != (rows, cols):
             rows, cols = new_r, new_c
-            bottom = BottomDecor(cols, rows)
+            water_top = max(1, hud_height(rows, cfg.get("hud", True))) + 2
+            bottom = BottomDecor(cols, rows, water_top=water_top)
             env.init_seaweed(cols, rows)
             stdscr.clear()
 
@@ -190,7 +193,7 @@ def run_sim(stdscr, cfg):
                          top=max(1, hud_height(rows, cfg.get("hud", True))))
         if cfg.get("light_rays"):
             env.draw_light_rays(stdscr, rows, cols, t, theme)
-        env.draw_seaweed(stdscr, rows, cols, t, theme)
+        env.draw_seaweed(stdscr, rows, cols, t, theme, top=water_top)
         bottom.draw(stdscr, theme, t)
         env.draw_sand(stdscr, rows, cols, t, theme)
         for e in (fishes + sharks + whales + jellies + turtles +

@@ -51,14 +51,20 @@ class ArtTransparencyTests(unittest.TestCase):
                                                   frame=frame_index, size=(rows, cols),
                                                   x=x, theme=theme_name):
                                     creature.x, creature.y = x, 3
+                                    draw_x, draw_y = x, 3
+                                    if cls is entities.Crab:
+                                        # Yengecin görsel konumu yeniden boyutlandırmada
+                                        # mevcut pencerenin zeminine ve kenarlarına bağlıdır.
+                                        draw_x = max(1, min(cols - 10, x))
+                                        draw_y = rows - 4
                                     screen = PatternedScreen(rows, cols)
                                     expected = [line[:] for line in screen.cells]
                                     for row, line in enumerate(lines):
                                         for col, ch in enumerate(line):
                                             if ch == " " and (row, col) not in spaces:
                                                 continue
-                                            if 0 <= x + col < cols - 1:
-                                                expected[3 + row][x + col] = ch
+                                            if 0 <= draw_x + col < cols - 1:
+                                                expected[draw_y + row][draw_x + col] = ch
                                     with mock.patch.object(entities, "cp", return_value=0):
                                         creature.draw(screen, THEMES[theme_name], 0)
                                     self.assertEqual(screen.cells, expected)

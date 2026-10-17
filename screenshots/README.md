@@ -4,6 +4,10 @@ Bu klasör Bentosim modüllerinin ekran görüntüleri ve demo GIF'leri içindir
 
 ## Çizim önizlemesi
 
+[Zemin önce/sonra](seabed-before-after.svg), `realistic` temasında aynı dekor ve
+yengeç yerleşimiyle eski blok şeritlerini ve yeni doğal kum dokusunu karşılaştırır.
+İki panelde yalnızca kum çizimi farklıdır. Bu da koddan üretilen statik bir SVG'dir.
+
 [Balina önizlemesi](whale-preview.svg), mevcut 104×12 ASCII çizimini `realistic`
 temasının renkleriyle gösterir. Sabit hücre yerleşimi çizimin satır sonlarında
 kaymasını önler; SVG yakınlaştırılabilir. Beş baloncuğun konumu balinanın

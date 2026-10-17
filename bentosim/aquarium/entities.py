@@ -304,7 +304,7 @@ class Fish(Entity):
             attr = cp(dimmed)
         else:
             attr = cp(self.rgb)
-        draw_art_opaque(win, self.y, self.x, self.lines, attr)
+        draw_swimming_art(win, self.y, self.x, self.lines, attr)
 
     def emit_bubble(self):
         if self.bcd <= 0:
@@ -347,7 +347,10 @@ class Shark(Entity):
         self.spans = SHARK_SPANS_R if self.right else SHARK_SPANS_L
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
-        self.x = float(-self.W-12 if self.right else cols+self.W+12)
+        # Opak çizimin [sol, sağ) sınırları; son terminal sütunu yazılmıyor.
+        self.left_edge = min(start for row in self.spans for start, end in row)
+        self.right_edge = max(end for row in self.spans for start, end in row)
+        self.x = float(-self.right_edge if self.right else cols - 1 - self.left_edge)
         self.base_y = float(random.randint(2, max(2, rows-3-self.H)))
         self.y  = self.base_y
         self.nom_spd = random.uniform(0.10,0.38) * spd_mult
@@ -379,7 +382,8 @@ class Shark(Entity):
         self.y = lerp(self.y, self.target_y, 0.025)
         self.y = clamp_swim_y(self.y, rows, self.H)
         self.x += self.dx
-        if self.x > cols+self.W+20 or self.x < -self.W-20:
+        if (self.right and int(self.x) + self.left_edge >= cols - 1) or \
+                (not self.right and int(self.x) + self.right_edge <= 0):
             self.dead = True
 
     def draw(self, win, theme, t):
@@ -419,7 +423,9 @@ class Whale(Entity):
         self.spans = WHALE_SPANS_R if self.right else WHALE_SPANS_L
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
-        self.x = float(-self.W-15 if self.right else cols+self.W+15)
+        self.left_edge = min(start for row in self.spans for start, end in row)
+        self.right_edge = max(end for row in self.spans for start, end in row)
+        self.x = float(-self.right_edge if self.right else cols - 1 - self.left_edge)
         self.base_y = float(random.randint(2, max(2,rows-3-self.H)))
         self.y  = self.base_y
         self.dx = random.uniform(0.025,0.07)*spd_mult*(1 if self.right else -1)
@@ -431,7 +437,8 @@ class Whale(Entity):
         self.y = self.base_y + math.sin(t*0.025+self.phase)*0.7
         self.y = clamp_swim_y(self.y, rows, self.H)
         self.spout_cd -= 1
-        if self.x > cols+self.W+20 or self.x < -self.W-20:
+        if (self.right and int(self.x) + self.left_edge >= cols - 1) or \
+                (not self.right and int(self.x) + self.right_edge <= 0):
             self.dead = True
 
     def emit_spout(self):
@@ -489,9 +496,13 @@ class Jellyfish(Entity):
         # Dokunaçlar koyu kalır; mono temada da ayrı palet tonlarına ulaşır.
         dark_jc = tuple(int(c * 0.65) for c in jc)
         frame = JELLY_FRAMES[self.frame]
+        rows, _ = win.getmaxyx()
+        y = int(clamp_swim_y(self.y, rows, len(frame)))
         for i,line in enumerate(frame):
+            if y + i >= rows - 3:
+                break
             a = cp(jc, bold=True) if i <= 1 else cp(dark_jc, dim=True)
-            draw_art_shape(win, int(self.y)+i, self.x, [line], a,
+            draw_art_shape(win, y+i, self.x, [line], a,
                            solid_rows=(0,) if i <= 1 else ())
 
 # ════════════════════════════════════════════════════════════════
@@ -569,8 +580,8 @@ class Crab(Entity):
         self.right = random.random() > 0.5
         self.x = float(random.randint(2, max(3,cols-10)))
         self.y = float(rows-4)
-        base_spd = random.uniform(0.04,0.14)*spd_mult
-        self.dx = base_spd*(1 if self.right else -1)
+        base_spd = random.uniform(0.04,0.14)
+        self.dx = base_spd*spd_mult*(1 if self.right else -1)
         self.nom_spd = base_spd
         self.frame = 0; self.fcd = random.randint(10,20)
         self.dir_cd = random.randint(60,140)
@@ -606,7 +617,9 @@ class Crab(Entity):
     def draw(self, win, theme, t):
         attr=cp(theme["crab"],bold=True)
         frames=CRAB_R if self.right else CRAB_L
-        draw_art_shape(win, self.y, self.x, frames[self.frame], attr,
+        rows, cols = win.getmaxyx()
+        x = max(1.0, min(float(cols - 10), self.x))
+        draw_art_shape(win, rows - 4, x, frames[self.frame], attr,
                        solid_rows=(0, 1))
 
 # ════════════════════════════════════════════════════════════════
@@ -647,7 +660,7 @@ class Octopus(Entity):
         col = theme["octo"] if not self.inking else tuple(max(0,c-80) for c in theme["octo"])
         attr=cp(col,bold=True)
         frame=OCTOPUS_FRAMES[self.frame]
-        draw_art_shape(win, self.y, self.x, frame, attr, solid_rows=(0, 1))
+        draw_swimming_art(win, self.y, self.x, frame, attr, solid_rows=(0, 1))
 
 # ════════════════════════════════════════════════════════════════
 #  YILAN BALIĞI
@@ -675,7 +688,7 @@ class Eel(Entity):
 
     def draw(self, win, theme, t):
         attr=cp(theme["eel"],bold=True)
-        safeadd(win,int(self.y),int(self.x),self.art,attr)
+        draw_swimming_art(win, self.y, self.x, [self.art], attr)
 
 # ════════════════════════════════════════════════════════════════
 #  IŞIN BALIĞI (MANTA RAY)
@@ -701,7 +714,7 @@ class MantaRay(Entity):
 
     def draw(self, win, theme, t):
         attr=cp(theme["ray_fish"],bold=True)
-        draw_art_shape(win, self.y, self.x, self.lines, attr, solid_rows=(1, 2))
+        draw_swimming_art(win, self.y, self.x, self.lines, attr, solid_rows=(1, 2))
 
 # ════════════════════════════════════════════════════════════════
 #  KABARCIK
@@ -732,7 +745,7 @@ class Bubble(Entity):
 # ════════════════════════════════════════════════════════════════
 
 class BottomDecor:
-    def __init__(self, cols, rows):
+    def __init__(self, cols, rows, water_top=4):
         self.items=[]
         if cols < 18 or rows < 10:
             return
@@ -753,6 +766,9 @@ class BottomDecor:
             elif k=="skull":      art=SKULL_ART
             elif k=="anchor":     art=ANCHOR_ART
             else:                 art=ROCK_ART
+            y=rows-3-len(art)
+            if y < water_top:
+                continue
             w=max(cell_width(line) for line in art)
             if cols - w - 2 <= 2:
                 continue
@@ -760,7 +776,6 @@ class BottomDecor:
             gap=3
             if any(px < end + gap and px + w > start - gap for start, end in occupied):
                 continue
-            y=rows-3-len(art)
             self.items.append((k,px,y,art))
             occupied.append((px, px+w))
 
@@ -782,5 +797,5 @@ class BottomDecor:
                 v=math.sin(t*0.08)*0.3+0.7
                 rgb=tuple(int(c*v) for c in rgb)
             attr=cp(rgb,bold=bold)
-            for i,line in enumerate(art):
-                safeadd(win,sy+i,px,line,attr)
+            solid_rows = range(len(art)) if kind in ("treasure", "rock", "skull") else ()
+            draw_art_shape(win, sy, px, art, attr, solid_rows=solid_rows)

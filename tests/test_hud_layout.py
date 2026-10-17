@@ -9,6 +9,33 @@ from bentosim.core import cell_width
 
 
 class HudLayoutTests(unittest.TestCase):
+    def test_large_creature_previews_are_complete_and_keep_footer_clear(self):
+        for selection, key in ((2, "shark"), (3, "whale")):
+            for rows, cols in ((18, 80), (24, 80), (40, 120)):
+                with self.subTest(creature=key, size=(rows, cols)):
+                    win = mock.Mock()
+                    win.getmaxyx.return_value = (rows, cols)
+                    win.getch.side_effect = [menu.curses.KEY_DOWN] * selection + [10]
+                    writes, frames = [], []
+                    win.erase.side_effect = writes.clear
+                    win.addstr.side_effect = lambda *args: writes.append(args)
+                    win.refresh.side_effect = lambda: frames.append(writes[:])
+                    with mock.patch.object(menu.curses, "curs_set"), \
+                            mock.patch.object(menu, "cp", return_value=0):
+                        menu.run_menu(win, DEFAULT_CFG.copy())
+                    frame = frames[-1]
+                    headings = [i for i, write in enumerate(frame) if write[2] == "Önizleme:"]
+                    if rows < 24:
+                        self.assertFalse(headings)
+                        continue
+                    self.assertEqual(len(headings), 1)
+                    lines = menu.PREVIEW_ART[key][0]
+                    shown = frame[headings[0]+1:headings[0]+1+len(lines)]
+                    self.assertEqual([write[2] for write in shown], lines)
+                    for y, x, text, attr in shown:
+                        self.assertLess(y, rows - 3)
+                        self.assertLessEqual(x + cell_width(text), cols - 1)
+
     def test_menu_headings_stay_inside_border_without_wrapping(self):
         for rows, width in ((8, 20), (12, 40), (24, 80)):
             with self.subTest(size=(rows, width)):

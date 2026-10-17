@@ -283,6 +283,28 @@ class JellyfishPulseVisualTests(unittest.TestCase):
 class SwimmingBoundsVisualTests(unittest.TestCase):
     CLASSES = (entities.Shark, entities.Whale, entities.Turtle)
 
+    def test_all_fish_preserve_sand_and_state_when_resized_without_update(self):
+        for idx in range(len(art.FISH_DB)):
+            for right in (False, True):
+                with mock.patch.object(entities.random, "randrange", side_effect=[idx, 0]), \
+                        mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                    fish = entities.Fish(80, 32, 1.0, THEMES["realistic"])
+                fish.x, fish.y = 2, 25
+                before = vars(fish).copy()
+                for rows, cols in ((24, 80), (12, 40), (4, 10), (32, 80)):
+                    with self.subTest(shape=idx, right=right, size=(rows, cols)):
+                        win = mock.Mock()
+                        win.getmaxyx.return_value = (rows, cols)
+                        with mock.patch.object(entities, "cp", return_value=0):
+                            fish.draw(win, THEMES["realistic"], 0)
+                        for call in win.addstr.call_args_list:
+                            y, x, text, attr = call[0]
+                            self.assertGreaterEqual(y, 2)
+                            self.assertLess(y, rows - 3)
+                        if rows >= fish.H + 5:
+                            self.assertTrue(win.addstr.called)
+                        self.assertEqual(vars(fish), before)
+
     def test_spawned_and_updated_creatures_stay_above_sand(self):
         cases = [(cls, right) for cls in self.CLASSES for right in (False, True)]
         for cls, right in cases:

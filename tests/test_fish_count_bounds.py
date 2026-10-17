@@ -69,6 +69,29 @@ class FishCountBoundsTests(unittest.TestCase):
                     cli.run(["--fish", str(value)])
                 self.assertEqual(wrapper.call_args[0][1]["fish_count"], expected)
 
+    def test_lowering_count_reduces_live_fish_even_while_paused(self):
+        for paused in (False, True):
+            with self.subTest(paused=paused):
+                cfg = config.DEFAULT_CFG.copy()
+                cfg["fish_count"] = 3
+                win = mock.MagicMock()
+                win.getmaxyx.return_value = (24, 80)
+                keys = ([ord(" ")] if paused else []) + [ord("-"), ord("-"), ord("+"), ord("q")]
+                win.getch.side_effect = keys
+                counts = []
+                with ExitStack() as stack:
+                    for name in ("curs_set", "start_color", "use_default_colors"):
+                        stack.enter_context(mock.patch.object(sim.curses, name))
+                    stack.enter_context(mock.patch.object(sim, "env"))
+                    stack.enter_context(mock.patch.object(sim, "BottomDecor"))
+                    stack.enter_context(mock.patch.object(sim.Fish, "draw"))
+                    stack.enter_context(mock.patch.object(sim.time, "monotonic", return_value=0))
+                    stack.enter_context(mock.patch.object(sim.time, "sleep"))
+                    stack.enter_context(mock.patch.object(sim, "draw_hud", side_effect=lambda *args: counts.append(args[3]["fish"])))
+                    self.assertEqual(sim.run_sim(win, cfg), "quit")
+                self.assertEqual(counts[-3:], [2, 1, 1])
+                self.assertEqual(cfg["fish_count"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
