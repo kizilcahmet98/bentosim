@@ -51,3 +51,8 @@ Thumbs.db
 *.bak
 *.tmp
 *.orig
+
+# Yerel ajan ve oturum notları
+/AGENTS.md
+/HANDOFF.md
+/REVIEW.md
