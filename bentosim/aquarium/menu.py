@@ -12,15 +12,15 @@ from ..core import cp, safeadd, cell_width, clip_cells
 from .themes import THEMES, THEME_NAMES
 from .config import BOUNDS, DEFAULT_CFG
 from .art import (
-    SHARK_PREVIEW, WHALE_PREVIEW, TURTLE_R, RAY_R, EEL_R,
+    SHARK_R, WHALE_R, SHARK_PREVIEW, WHALE_PREVIEW, TURTLE_R, RAY_R, EEL_R,
     CRAB_R, OCTOPUS_FRAMES, JELLY_FRAMES,
 )
 
 
 # Canlı toggle'ları için önizleme: (art lines, tema renk anahtarı)
 PREVIEW_ART = {
-    "shark":     (SHARK_PREVIEW,     "shark"),
-    "whale":     (WHALE_PREVIEW,     "whale"),
+    "shark":     (SHARK_R,           "shark"),
+    "whale":     (WHALE_R,           "whale"),
     "turtle":    (TURTLE_R,          "turtle"),
     "jellyfish": (JELLY_FRAMES[0],   "jelly"),
     "crab":      (CRAB_R[0],         "crab"),
@@ -28,6 +28,8 @@ PREVIEW_ART = {
     "eel":       (EEL_R,             "eel"),
     "manta":     (RAY_R,             "ray_fish"),
 }
+
+COMPACT_PREVIEW_ART = {"shark": SHARK_PREVIEW, "whale": WHALE_PREVIEW}
 
 
 def draw_menu_frame(win, rows, cols, theme_name):
@@ -181,8 +183,12 @@ def run_menu(stdscr, cfg):
                 if key in PREVIEW_ART:
                     art, theme_key = PREVIEW_ART[key]
                     avail_cols = max(0, cols - right_x - 1)
-                    art_width = max(cell_width(line) for line in art)
-                    if rr + 2 + len(art) <= rows - 3 and art_width <= avail_cols:
+                    avail_rows = max(0, rows - 3 - rr - 2)
+                    variants = (art, COMPACT_PREVIEW_ART[key]) if key in COMPACT_PREVIEW_ART else (art,)
+                    art = next((shape for shape in variants
+                                if len(shape) <= avail_rows and
+                                max(cell_width(line) for line in shape) <= avail_cols), None)
+                    if art is not None:
                         rr += 1
                         stdscr.addstr(rr, right_x, "Önizleme:", curses.A_BOLD)
                         rr += 1

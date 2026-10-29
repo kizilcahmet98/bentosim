@@ -9,12 +9,12 @@ from .sim import run_sim
 from .themes import THEME_NAMES
 
 
-def _curses_main(stdscr, cfg, start_menu):
+def _curses_main(stdscr, cfg, start_menu, debug_whales=0):
     if start_menu:
         cfg = run_menu(stdscr, cfg)
         save_cfg(cfg)
     while True:
-        r = run_sim(stdscr, cfg)
+        r = run_sim(stdscr, cfg, debug_whales=debug_whales)
         if r == "menu":
             cfg = run_menu(stdscr, cfg)
             save_cfg(cfg)
@@ -32,6 +32,9 @@ def run(argv=None):
     p.add_argument("--fish",   type=int, help="Maksimum balık sayısı")
     p.add_argument("--fps",    type=int, help="FPS limiti (5-60)")
     p.add_argument("--speed",  type=float, help="Hız çarpanı (0.1-5.0)")
+    p.add_argument("--debug-whales", nargs="?", type=int, choices=(3, 4, 5),
+                   const=4, default=0, metavar="3-5",
+                   help="Geçici debug: hemen 3-5 balina göster (varsayılan: 4)")
     p.add_argument("--reset",  action="store_true", help="Yapılandırmayı sıfırla")
     args = p.parse_args(argv)
 
@@ -46,7 +49,7 @@ def run(argv=None):
         save_cfg(cfg)
 
     try:
-        curses.wrapper(_curses_main, cfg, args.menu)
+        curses.wrapper(_curses_main, cfg, args.menu, args.debug_whales)
     except KeyboardInterrupt:
         pass
     print("\n🐠  Güle güle, akvaryum!")

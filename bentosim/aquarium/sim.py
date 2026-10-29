@@ -38,7 +38,7 @@ class SimulationClock:
         return steps
 
 
-def run_sim(stdscr, cfg):
+def run_sim(stdscr, cfg, debug_whales=0):
     # Globalleri sıfırla — tema değiştiğinde / yeniden başlatıldığında
     env._sw_h = {}
     reset_color_cache()
@@ -65,6 +65,16 @@ def run_sim(stdscr, cfg):
     crabs   = []; octos = []; eels = []; mantas = []; bubbles = []
     bottom  = BottomDecor(cols, rows, water_top=water_top)
     env.init_seaweed(cols, rows)
+
+    # Yalnızca bu çalıştırma için: balinalar ilk karede suyun içinde görünür.
+    for index in range(debug_whales):
+        whale = Whale(cols, rows, spd)
+        nose = whale.right_edge - 1 if whale.right else whale.left_edge
+        whale.x = max(0, cols - 2) * (index + 1) / (debug_whales + 1) - nose
+        max_y = max(water_top, rows - 3 - whale.H)
+        whale.base_y = water_top + (max_y - water_top) * index / max(1, debug_whales - 1)
+        whale.y = whale.base_y
+        whales.append(whale)
 
     t = 0.0
     paused = False

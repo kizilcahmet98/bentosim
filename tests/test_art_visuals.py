@@ -49,11 +49,15 @@ class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
     def test_whale_is_larger_than_shark_and_masks_cover_its_whole_shape(self):
         width, height = len(art.WHALE_R[0]), len(art.WHALE_R)
         self.assertGreaterEqual(width, 100)
-        self.assertEqual(height, 12)
+        self.assertEqual(height, 16)
         self.assertGreater(width, len(art.SHARK_R[0]))
-        self.assertIn("><=====/", art.WHALE_R[3])
-        self.assertEqual(art.WHALE_R[-2].strip(), "/ //")
-        self.assertEqual(art.WHALE_R[-1].strip(), "//")
+        self.assertEqual(art.WHALE_R[7].index("<"), 1)
+        vertical_mirror = str.maketrans({"/": "\\", "\\": "/"})
+        for row in range(3, 7):
+            self.assertEqual(art.WHALE_R[row][:10].translate(vertical_mirror),
+                             art.WHALE_R[14 - row][:10])
+        self.assertEqual(sum(line.count(")") for line in art.WHALE_R), 1)
+        self.assertNotIn("|", "\n".join(art.WHALE_R))
         self.assertEqual(sum(line.count("^") for line in art.WHALE_R), 1)
         for lines, spans in ((art.WHALE_R, entities.WHALE_SPANS_R),
                               (art.WHALE_L, entities.WHALE_SPANS_L)):
@@ -94,7 +98,7 @@ class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
     def test_rendered_large_creatures_keep_outline_and_clip_in_small_windows(self):
         cases = [(cls, right, gap, body)
                  for cls, gap, body in ((entities.Shark, (1, 20), (5, 30)),
-                                        (entities.Whale, (1, 20), (3, 40)))
+                                        (entities.Whale, (1, 20), (6, 40)))
                  for right in (False, True)]
         for cls, right, gap, body in cases:
             with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):

@@ -2,7 +2,7 @@ import unittest
 from contextlib import ExitStack
 from unittest import mock
 
-from bentosim.aquarium import hud, sim, environment, menu
+from bentosim.aquarium import art, hud, sim, environment, menu
 from bentosim.aquarium.config import DEFAULT_CFG
 from bentosim.aquarium.themes import THEMES
 from bentosim.core import cell_width
@@ -11,7 +11,8 @@ from bentosim.core import cell_width
 class HudLayoutTests(unittest.TestCase):
     def test_large_creature_previews_are_complete_and_keep_footer_clear(self):
         for selection, key in ((2, "shark"), (3, "whale")):
-            for rows, cols in ((18, 80), (24, 80), (40, 120)):
+            for rows, cols in ((18, 80), (24, 80), (24, 180), (40, 118),
+                               (40, 119), (40, 120), (40, 160), (40, 161), (40, 180)):
                 with self.subTest(creature=key, size=(rows, cols)):
                     win = mock.Mock()
                     win.getmaxyx.return_value = (rows, cols)
@@ -29,12 +30,42 @@ class HudLayoutTests(unittest.TestCase):
                         self.assertFalse(headings)
                         continue
                     self.assertEqual(len(headings), 1)
-                    lines = menu.PREVIEW_ART[key][0]
+                    if rows >= 40 and (cols >= 161 or (cols >= 119 and key == "shark")):
+                        lines = art.WHALE_R if key == "whale" else art.SHARK_R
+                    else:
+                        lines = art.WHALE_PREVIEW if key == "whale" else art.SHARK_PREVIEW
                     shown = frame[headings[0]+1:headings[0]+1+len(lines)]
                     self.assertEqual([write[2] for write in shown], lines)
                     for y, x, text, attr in shown:
                         self.assertLess(y, rows - 3)
                         self.assertLessEqual(x + cell_width(text), cols - 1)
+
+    def test_menu_preview_adapts_when_resized_without_changing_settings(self):
+        size = [(40, 180)]
+        events = iter([(menu.curses.KEY_DOWN, None)] * 3 +
+                      [(-1, (24, 80)), (-1, (40, 180)), (10, None)])
+        win = mock.Mock()
+        win.getmaxyx.side_effect = lambda: size[0]
+
+        def read_key():
+            key, next_size = next(events)
+            if next_size is not None:
+                size[0] = next_size
+            return key
+
+        win.getch.side_effect = read_key
+        writes, frames = [], []
+        win.erase.side_effect = writes.clear
+        win.addstr.side_effect = lambda *args: writes.append(args)
+        win.refresh.side_effect = lambda: frames.append(writes[:])
+        cfg = DEFAULT_CFG.copy()
+        with mock.patch.object(menu.curses, "curs_set"), \
+                mock.patch.object(menu, "cp", return_value=7):
+            menu.run_menu(win, cfg)
+        for frame, expected in zip(frames[-3:], (art.WHALE_R, art.WHALE_PREVIEW, art.WHALE_R)):
+            shown = [write[2] for write in frame if len(write) >= 4 and write[3] == 7]
+            self.assertEqual(shown, expected)
+        self.assertEqual(cfg, DEFAULT_CFG)
 
     def test_menu_headings_stay_inside_border_without_wrapping(self):
         for rows, width in ((8, 20), (12, 40), (24, 80)):

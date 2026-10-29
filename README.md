@@ -48,7 +48,12 @@ python -m bentosim aquarium                    # varsayılan
 python -m bentosim aquarium --menu             # menüyle başlat
 python -m bentosim aquarium --theme premium    # tema seç
 python -m bentosim aquarium --fish 18 --fps 60 # balık ve FPS ayarı
+python -m bentosim aquarium --debug-whales    # hemen 4 balina (geçici debug)
 ```
+
+`--debug-whales 3` veya `--debug-whales 5` ile sayı seçilebilir. Balina ayarı
+kapalı olsa da çalışır; debug seçimi ayarlara kaydedilmez. Normal başlatmada
+mevcut doğum süreleri ve tek balina sınırı korunur.
 
 ### Klavye
 
@@ -102,7 +107,12 @@ python -m bentosim aquarium                    # default
 python -m bentosim aquarium --menu             # start with menu
 python -m bentosim aquarium --theme premium    # pick a theme
 python -m bentosim aquarium --fish 18 --fps 60 # tune fish & FPS
+python -m bentosim aquarium --debug-whales    # show 4 whales immediately (temporary debug)
 ```
+
+Use `--debug-whales 3` or `--debug-whales 5` to choose the count. This works even
+when whales are disabled in settings; the debug option is never saved. Normal
+startup keeps the existing spawn delays and single-whale limit.
 
 ### Keyboard
 
@@ -153,7 +163,6 @@ bentosim/
 │   │   └── cli.py         # argparse
 │   ├── __init__.py
 │   └── __main__.py        # 'python -m bentosim <modül>'
-├── screenshots/
 ├── LICENSE.md
 ├── README.md
 ├── CLAUDE.md              # geliştirme bağlamı
