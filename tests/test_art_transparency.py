@@ -21,6 +21,46 @@ class PatternedScreen:
 
 
 class ArtTransparencyTests(unittest.TestCase):
+    def test_shark_tail_and_swept_fin_gaps_preserve_background(self):
+        water_cells = ((1, 20), (4, 16), (8, 16), (9, 18),
+                       (9, 50), (10, 30), (10, 51), (11, 20))
+        solid_cells = ((3, 7), (2, 35), (5, 30), (7, 30), (9, 43), (10, 42))
+        for right in (False, True):
+            with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                shark = entities.Shark(90, 30, 1.0)
+            shark.x, shark.y = 3, 3
+            for theme_name, theme in THEMES.items():
+                with self.subTest(right=right, theme=theme_name):
+                    screen = PatternedScreen(30, 90)
+                    before = [row[:] for row in screen.cells]
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        shark.draw(screen, theme, 0)
+                    for row, col in water_cells + solid_cells:
+                        draw_col = col if right else shark.W - 1 - col
+                        self.assertEqual(shark.lines[row][draw_col], " ")
+                        expected = before[3 + row][3 + draw_col] if (row, col) in water_cells else " "
+                        self.assertEqual(screen.cells[3 + row][3 + draw_col], expected,
+                                         (row, col))
+
+    def test_skull_below_shark_head_remains_whole_in_both_directions(self):
+        for right in (False, True):
+            with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                shark = entities.Shark(90, 30, 1.0)
+            shark.x, shark.y = 3, 3
+            width = max(map(len, art.SKULL_ART))
+            x = 3 + (50 if right else shark.W - 50 - width)
+            y = 3 + 9
+            decor = entities.BottomDecor.__new__(entities.BottomDecor)
+            decor.items = [("skull", x, y, art.SKULL_ART)]
+            for theme_name, theme in THEMES.items():
+                with self.subTest(right=right, theme=theme_name):
+                    screen = PatternedScreen(30, 90)
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        decor.draw(screen, theme, 0)
+                        before = [row[x:x + width] for row in screen.cells[y:y + len(art.SKULL_ART)]]
+                        shark.draw(screen, theme, 0)
+                    self.assertEqual([row[x:x + width] for row in screen.cells[y:y + len(art.SKULL_ART)]], before)
+
     def test_whale_fin_gaps_preserve_background_but_body_and_fin_stay_solid(self):
         water_cells = ((12, 3), (13, 3), (12, 20), (12, 60),
                        (13, 20), (13, 60), (14, 20), (14, 60))

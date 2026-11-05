@@ -48,12 +48,20 @@ python -m bentosim aquarium                    # varsayılan
 python -m bentosim aquarium --menu             # menüyle başlat
 python -m bentosim aquarium --theme premium    # tema seç
 python -m bentosim aquarium --fish 18 --fps 60 # balık ve FPS ayarı
+python -m bentosim aquarium --debug-species shark # hemen 3 köpekbalığı
 python -m bentosim aquarium --debug-whales    # hemen 4 balina (geçici debug)
 ```
 
-`--debug-whales 3` veya `--debug-whales 5` ile sayı seçilebilir. Balina ayarı
-kapalı olsa da çalışır; debug seçimi ayarlara kaydedilmez. Normal başlatmada
-mevcut doğum süreleri ve tek balina sınırı korunur.
+`--debug-species` türleri: `fish`, `shark`, `whale`, `jellyfish`, `turtle`,
+`crab`, `octopus`, `eel`, `manta`, `bubble`. Seçilen türün ayarı kapalı olsa
+da ilk karede 3 örnek suyun içinde görünür (yengeçler zeminde). Dar ekranda
+büyük canlılar kırpılır; tam inceleme için terminali büyütün. Sonrasında
+akvaryum normal davranışına devam eder. Debug seçimi menüden dönüşte korunur,
+ayarlara kaydedilmez.
+
+Önceki `--debug-whales` seçeneği de korunur; `3` veya `5` ile sayı seçilebilir
+(varsayılan: 4). İki debug seçeneği birlikte kullanılamaz. Normal başlatmada
+mevcut doğum süreleri ve tür başına sınırlar korunur.
 
 ### Klavye
 
@@ -107,12 +115,20 @@ python -m bentosim aquarium                    # default
 python -m bentosim aquarium --menu             # start with menu
 python -m bentosim aquarium --theme premium    # pick a theme
 python -m bentosim aquarium --fish 18 --fps 60 # tune fish & FPS
+python -m bentosim aquarium --debug-species shark # show 3 sharks immediately
 python -m bentosim aquarium --debug-whales    # show 4 whales immediately (temporary debug)
 ```
 
-Use `--debug-whales 3` or `--debug-whales 5` to choose the count. This works even
-when whales are disabled in settings; the debug option is never saved. Normal
-startup keeps the existing spawn delays and single-whale limit.
+`--debug-species` accepts `fish`, `shark`, `whale`, `jellyfish`, `turtle`,
+`crab`, `octopus`, `eel`, `manta`, and `bubble`. Three examples appear in the
+water on the first frame even if the species is disabled (crabs stay on the
+seabed). Large creatures are clipped on small screens; enlarge the terminal
+to inspect them fully. The aquarium then continues its normal behavior.
+The debug selection survives menu visits and is never saved in settings.
+
+The existing `--debug-whales` option is also supported; pass `3` or `5` to
+choose the count (default: 4). The two debug options are mutually exclusive.
+Normal startup keeps the existing spawn delays and per-species limits.
 
 ### Keyboard
 

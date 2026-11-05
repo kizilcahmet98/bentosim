@@ -75,7 +75,8 @@ class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
         width = len(art.SHARK_R[0])
         self.assertGreaterEqual(width, 60)
         self.assertGreaterEqual(len(art.SHARK_R), 8)
-        self.assertIn(")))))", "\n".join(art.SHARK_R))
+        self.assertEqual(sum(line.count("/////") for line in art.SHARK_R), 1)
+        self.assertNotIn(")))))", "\n".join(art.SHARK_R))
         for right, lines, spans in ((True, art.SHARK_R, entities.SHARK_SPANS_R),
                                      (False, art.SHARK_L, entities.SHARK_SPANS_L)):
             with self.subTest(right=right):

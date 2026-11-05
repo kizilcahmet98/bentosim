@@ -4,8 +4,9 @@ import curses
 import random
 import time
 
-from ..core import reset_color_cache
+from ..core import cell_width, reset_color_cache
 from . import environment as env
+from .art import CRAB_R, JELLY_FRAMES, OCTOPUS_FRAMES
 from .entities import (
     Fish, Shark, Whale, Jellyfish, Turtle, Crab, Octopus,
     Eel, MantaRay, Bubble, BottomDecor,
@@ -13,6 +14,65 @@ from .entities import (
 from .themes import THEMES, THEME_NAMES
 from .hud import draw_hud, hud_height
 from .config import BOUNDS
+
+
+DEBUG_SPECIES = (
+    "fish", "shark", "whale", "jellyfish", "turtle", "crab",
+    "octopus", "eel", "manta", "bubble",
+)
+
+
+def _debug_creatures(species, cols, rows, spd, theme, water_top):
+    """Ayarları değiştirmeden ilk kareye üç görünür örnek yerleştir."""
+    factories = {
+        "fish": lambda: Fish(cols, rows, spd, theme),
+        "shark": lambda: Shark(cols, rows, spd),
+        "whale": lambda: Whale(cols, rows, spd),
+        "jellyfish": lambda: Jellyfish(cols, rows),
+        "turtle": lambda: Turtle(cols, rows, spd),
+        "crab": lambda: Crab(cols, rows, spd),
+        "octopus": lambda: Octopus(cols, rows),
+        "eel": lambda: Eel(cols, rows, spd),
+        "manta": lambda: MantaRay(cols, rows, spd),
+        "bubble": lambda: Bubble(0, water_top),
+    }
+    creatures = []
+    for index in range(3):
+        creature = factories[species]()
+        if species == "jellyfish":
+            lines = JELLY_FRAMES[creature.frame]
+        elif species == "crab":
+            lines = CRAB_R[creature.frame]
+        elif species == "octopus":
+            lines = OCTOPUS_FRAMES[creature.frame]
+        elif species == "eel":
+            lines = [creature.art]
+        elif species == "bubble":
+            lines = [creature.char]
+        else:
+            lines = creature.lines
+        width = max(cell_width(line) for line in lines)
+        max_x = cols - 1 - width
+        if species == "crab":
+            max_x = min(max_x, cols - 10)
+        if max_x >= 0:
+            creature.x = max_x * index / 2
+        else:
+            # Dar ekranda büyük canlının başını suyun içinde tut.
+            nose = (getattr(creature, "right_edge", width) - 1
+                    if getattr(creature, "right", True)
+                    else getattr(creature, "left_edge", 0))
+            creature.x = max(0, cols - 2) * (index + 1) / 4 - nose
+        max_y = max(water_top, rows - 3 - len(lines))
+        creature.y = water_top + (max_y - water_top) * index / 2
+        if species == "crab":
+            creature.y = float(rows - 4)
+        if hasattr(creature, "base_y"):
+            creature.base_y = creature.y
+        if hasattr(creature, "target_y"):
+            creature.target_y = creature.y
+        creatures.append(creature)
+    return creatures
 
 
 class SimulationClock:
@@ -38,7 +98,7 @@ class SimulationClock:
         return steps
 
 
-def run_sim(stdscr, cfg, debug_whales=0):
+def run_sim(stdscr, cfg, debug_whales=0, debug_species=None):
     # Globalleri sıfırla — tema değiştiğinde / yeniden başlatıldığında
     env._sw_h = {}
     reset_color_cache()
@@ -65,6 +125,15 @@ def run_sim(stdscr, cfg, debug_whales=0):
     crabs   = []; octos = []; eels = []; mantas = []; bubbles = []
     bottom  = BottomDecor(cols, rows, water_top=water_top)
     env.init_seaweed(cols, rows)
+
+    if debug_species is not None:
+        selected = _debug_creatures(debug_species, cols, rows, spd, theme, water_top)
+        groups = {
+            "fish": fishes, "shark": sharks, "whale": whales,
+            "jellyfish": jellies, "turtle": turtles, "crab": crabs,
+            "octopus": octos, "eel": eels, "manta": mantas, "bubble": bubbles,
+        }
+        groups[debug_species][:] = selected
 
     # Yalnızca bu çalıştırma için: balinalar ilk karede suyun içinde görünür.
     for index in range(debug_whales):

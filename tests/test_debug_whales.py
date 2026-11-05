@@ -66,7 +66,8 @@ class DebugWhaleTests(unittest.TestCase):
                 mock.patch.object(cli, "save_cfg") as save:
             cli._curses_main(screen, cfg, False, debug_whales=4)
         self.assertEqual(run_sim.call_args_list,
-                         [mock.call(screen, cfg, debug_whales=4)] * 2)
+                         [mock.call(screen, cfg, debug_whales=4,
+                                    debug_species=None)] * 2)
         save.assert_called_once_with(DEFAULT_CFG)
 
 
