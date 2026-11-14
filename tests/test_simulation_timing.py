@@ -1,4 +1,5 @@
 import copy
+import math
 import random
 import unittest
 from contextlib import ExitStack
@@ -191,6 +192,61 @@ class TurtleGlidingTests(unittest.TestCase):
                 movements.append(movement)
             target = 0.7 if state == turtle.ST_REST else 1.0
             self.assertAlmostEqual(movements[-1] / turtle.dx, target, delta=0.001)
+
+    def test_slowest_turtle_draw_advances_within_one_second_at_normal_speed(self):
+        # Gerçek doğumun en düşük hızı ve gerçek çizim sütunu denetlenir.
+        # Genel hız ayarı süreyi ters orantılı değiştirmeye devam etmeli.
+        for right in (False, True):
+            for state in (entities.Turtle.ST_SWIM, entities.Turtle.ST_REST,
+                          entities.Turtle.ST_RISE):
+                for speed in (0.1, 1.0, 5.0):
+                    with self.subTest(right=right, state=state, speed=speed):
+                        with mock.patch.object(entities.random, "random", return_value=float(right)), \
+                                mock.patch.object(entities.random, "uniform", side_effect=lambda lo, hi: lo):
+                            turtle = entities.Turtle(1000, 30, speed)
+                        turtle.x, turtle.base_y, turtle.y = 400.25, 6.0, 6.0
+                        turtle.state, turtle.state_cd = state, 10000
+                        turtle.motion_scale = 0.7 if state == turtle.ST_REST else 1.0
+                        win = mock.Mock()
+                        win.getmaxyx.return_value = (30, 1000)
+                        max_ticks = int(math.ceil(30 / speed))
+                        previous_col, unchanged_ticks = None, 0
+                        with mock.patch.object(entities, "cp", return_value=0):
+                            for tick in range(max(250, 3 * max_ticks) + 1):
+                                win.addstr.reset_mock()
+                                turtle.draw(win, THEMES["realistic"], tick)
+                                mouth = ")" if right else "("
+                                columns = [x + text.index(mouth)
+                                           for (y, x, text, attr), _ in win.addstr.call_args_list
+                                           if y == int(turtle.y) + turtle.mouth_row and mouth in text]
+                                self.assertEqual(len(columns), 1)
+                                col = columns[0]
+                                if col == previous_col:
+                                    unchanged_ticks += 1
+                                    self.assertLess(unchanged_ticks, max_ticks)
+                                else:
+                                    if previous_col is not None:
+                                        self.assertGreater((col - previous_col) * (1 if right else -1), 0)
+                                    unchanged_ticks = 0
+                                previous_col = col
+                                turtle.update(tick, 30, 1000, speed)
+
+    def test_speed_setting_scales_glide_distance_for_generated_speed_extremes(self):
+        for right in (False, True):
+            for use_maximum in (False, True):
+                distances = {}
+                for speed in (0.1, 1.0, 5.0):
+                    with mock.patch.object(entities.random, "random", return_value=float(right)), \
+                            mock.patch.object(entities.random, "uniform",
+                                              side_effect=lambda lo, hi: hi if use_maximum else lo):
+                        turtle = entities.Turtle(1000, 30, speed)
+                    turtle.x, turtle.state, turtle.state_cd = 400.0, turtle.ST_REST, 1000
+                    for tick in range(250):
+                        turtle.update(tick, 30, 1000, speed)
+                    distances[speed] = abs(turtle.x - 400.0)
+                with self.subTest(right=right, use_maximum=use_maximum):
+                    for speed, distance in distances.items():
+                        self.assertAlmostEqual(distance, distances[1.0] * speed)
 
 
 if __name__ == "__main__":

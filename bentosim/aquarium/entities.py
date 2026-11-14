@@ -560,7 +560,8 @@ class Turtle(Entity):
         self.x = float(-self.W-8 if self.right else cols+self.W+8)
         self.base_y = float(random.randint(2, max(2,rows-3-self.H)))
         self.y = self.base_y
-        self.dx = random.uniform(0.02,0.09)*spd_mult*(1 if self.right else -1)
+        # Varsayılan hızda süzülürken de en geç bir saniyede bir sütun ilerle.
+        self.dx = random.uniform(0.05,0.09)*spd_mult*(1 if self.right else -1)
         self.motion_scale = 1.0
         self.phase = random.uniform(0,math.pi*2)
         # Mevcut fazı kullan: ek rastgele sayı tüketmeden farklı kulaç başlangıçları.
