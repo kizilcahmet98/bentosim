@@ -1,10 +1,11 @@
+import copy
 import math
 import unittest
 from unittest import mock
 
 from bentosim.aquarium import art, entities, environment
 from bentosim.aquarium.themes import THEMES
-from bentosim.core import rgb256
+from bentosim.core import cell_width, rgb256
 
 
 class MirrorAlignmentVisualTests(unittest.TestCase):
@@ -203,6 +204,24 @@ class WhaleSpoutVisualTests(unittest.TestCase):
 
 
 class TurtleBubbleVisualTests(unittest.TestCase):
+    def test_turtle_masks_cover_the_full_outline_in_both_directions(self):
+        shapes = list(zip(art.TURTLE_FRAMES_R, entities.TURTLE_FRAME_SPANS_R))
+        shapes += list(zip(art.TURTLE_FRAMES_L, entities.TURTLE_FRAME_SPANS_L))
+        for lines, spans in shapes:
+            self.assertEqual(len(lines), len(spans))
+            width = len(lines[0])
+            self.assertEqual((width, len(lines)), (18, 4))
+            self.assertEqual(art._mirror(art._mirror("\n".join(lines))), "\n".join(lines))
+            for row, (line, ranges) in enumerate(zip(lines, spans)):
+                self.assertEqual(cell_width(line), width)
+                covered = set()
+                for start, end in ranges:
+                    self.assertTrue(0 <= start < end <= width)
+                    covered.update(range(start, end))
+                for col, ch in enumerate(line):
+                    if ch != " ":
+                        self.assertIn(col, covered, (row, col, ch))
+
     def test_bubble_starts_above_mouth_in_both_directions(self):
         for right in (False, True):
             for x in (-3.5, 10.25, 75.5):
@@ -214,7 +233,7 @@ class TurtleBubbleVisualTests(unittest.TestCase):
                         turtle.bcd = 0
                         with mock.patch.object(entities.random, "uniform", return_value=scatter):
                             bubble = turtle.emit_bubble()
-                        mouth = ">" if right else "<"
+                        mouth = ")" if right else "("
                         col, row = next((col, row) for row, line in enumerate(turtle.lines)
                                         for col, ch in enumerate(line) if ch == mouth)
                         self.assertEqual(bubble.x, x + col + scatter)
@@ -227,6 +246,90 @@ class TurtleBubbleVisualTests(unittest.TestCase):
         with mock.patch.object(entities, "Bubble") as bubble:
             self.assertIsNone(turtle.emit_bubble())
             bubble.assert_not_called()
+
+
+class TurtleSwimmingAnimationTests(unittest.TestCase):
+    def make_turtle(self, right=True):
+        with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1), \
+                mock.patch.object(entities.random, "uniform", side_effect=(0.05, 0.0)):
+            turtle = entities.Turtle(90, 30, 1.0)
+        turtle.x, turtle.base_y, turtle.y = 10, 6, 6
+        turtle.state_cd = 1000
+        return turtle
+
+    def render(self, turtle, t=0):
+        win = mock.Mock()
+        win.getmaxyx.return_value = (30, 90)
+        with mock.patch.object(entities, "cp", return_value=0):
+            turtle.draw(win, THEMES["realistic"], t)
+        return tuple((y - int(turtle.y), x - int(turtle.x), text)
+                     for (y, x, text, attr), _ in win.addstr.call_args_list)
+
+    def body_cells(self, rendered, right):
+        # Kalkmış palet yalnızca karın önünü örter; kabuk, baş ve omuz sabittir.
+        fin_cols = range(7, 13) if right else range(5, 11)
+        return {(row, x + offset): ch for row, x, text in rendered
+                for offset, ch in enumerate(text)
+                if row < 2 or (row == 2 and x + offset not in fin_cols)}
+
+    def test_slow_stroke_moves_only_fins_and_returns_to_start_in_both_directions(self):
+        for right in (False, True):
+            turtle = self.make_turtle(right)
+            initial = self.render(turtle)
+            body = self.body_cells(initial, right)
+            poses = {initial}
+            mouth = turtle.mouth_row, turtle.mouth_col
+            for tick in range(1, 73):  # 30 Hz'de 2,4 saniye.
+                turtle.update(tick, 30, 90, 1.0)
+                rendered = self.render(turtle)
+                poses.add(rendered)
+                self.assertEqual(self.body_cells(rendered, right), body)
+                self.assertEqual((turtle.W, turtle.H), (18, 4))
+                self.assertEqual((turtle.mouth_row, turtle.mouth_col), mouth)
+            self.assertEqual(len(poses), 3)
+            self.assertEqual(self.render(turtle), initial)
+
+    def test_front_flipper_rises_without_retracting_its_tip_or_moving_its_joint(self):
+        for right, frames in ((True, art.TURTLE_FRAMES_R), (False, art.TURTLE_FRAMES_L)):
+            tips = []
+            col = (lambda x: x) if right else (lambda x: 17 - x)
+            tip_chars = "(`" if right else ")´"
+            for lines in frames:
+                self.assertEqual(lines[2][col(13)], "/" if right else "\\")
+                rear_start, rear_end = (2, 5) if right else (13, 16)
+                self.assertEqual(lines[3][rear_start:rear_end], "/_'" if right else "'_\\")
+                tip = [(row, x) for row in (2, 3) for x in range(7, 13)
+                       if lines[row][col(x)] in tip_chars]
+                self.assertEqual(len(tip), 1)
+                tips.extend(tip)
+            self.assertEqual({x for row, x in tips}, {7})
+            self.assertEqual({row for row, x in tips}, {2, 3})
+
+    def test_rest_holds_current_stroke_and_swimming_or_rising_resumes_it(self):
+        for state in (entities.Turtle.ST_SWIM, entities.Turtle.ST_RISE):
+            turtle = self.make_turtle()
+            for tick in range(18):
+                turtle.update(tick, 30, 90, 1.0)
+            tick_before, rendered_before = turtle.stroke_tick, self.render(turtle)
+            turtle.state = turtle.ST_REST
+            for tick in range(72):
+                turtle.update(tick, 30, 90, 1.0)
+            self.assertEqual(turtle.stroke_tick, tick_before)
+            self.assertEqual(self.render(turtle), rendered_before)
+            turtle.state = state
+            for tick in range(18):
+                turtle.update(tick, 30, 90, 1.0)
+            self.assertNotEqual(self.render(turtle), rendered_before)
+
+    def test_rendering_does_not_advance_stroke_or_consume_behavior_randomness(self):
+        turtle = self.make_turtle()
+        before = copy.deepcopy(vars(turtle))
+        rng_before = entities.random.getstate()
+        expected = self.render(turtle)
+        for t in (0, 10, 1000, 100000):
+            self.assertEqual(self.render(turtle, t), expected)
+        self.assertEqual(vars(turtle), before)
+        self.assertEqual(entities.random.getstate(), rng_before)
 
 
 class JellyfishPulseVisualTests(unittest.TestCase):

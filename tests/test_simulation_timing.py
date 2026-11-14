@@ -4,7 +4,7 @@ import unittest
 from contextlib import ExitStack
 from unittest import mock
 
-from bentosim.aquarium import environment, sim
+from bentosim.aquarium import entities, environment, sim
 from bentosim.aquarium.config import DEFAULT_CFG
 from bentosim.aquarium.themes import THEMES
 
@@ -150,6 +150,47 @@ class SimulationTimingTests(unittest.TestCase):
             for _ in range(10):
                 environment.draw_light_rays(FakeScreen(), 24, 80, 1, THEMES["realistic"])
         self.assertEqual(random.getstate(), before)
+
+
+class TurtleGlidingTests(unittest.TestCase):
+    def make_turtle(self, direction=1, speed=1.0):
+        turtle = entities.Turtle(120, 30, speed)
+        turtle.x, turtle.dx = 30.0, 0.05 * speed * direction
+        turtle.base_y, turtle.y = 6.0, 6.0
+        turtle.state_cd = 1000
+        return turtle
+
+    def test_rest_keeps_gliding_forward_through_the_full_rest_period(self):
+        for direction in (-1, 1):
+            for speed in (0.1, 1.0, 5.0):
+                with self.subTest(direction=direction, speed=speed):
+                    turtle = self.make_turtle(direction, speed)
+                    turtle.state = turtle.ST_REST
+                    stroke = turtle.stroke_tick
+                    for tick in range(250):
+                        previous_x = turtle.x
+                        turtle.update(tick, 30, 120, speed)
+                        movement = (turtle.x - previous_x) * direction
+                        self.assertGreaterEqual(movement, abs(turtle.dx) * 0.7 - 1e-10)
+                        self.assertLessEqual(movement, abs(turtle.dx) + 1e-10)
+                    self.assertEqual(turtle.stroke_tick, stroke)
+
+    def test_rest_and_resume_change_speed_gradually_without_stopping(self):
+        turtle = self.make_turtle()
+        previous_movement = turtle.dx
+        for state in (turtle.ST_REST, turtle.ST_SWIM, turtle.ST_REST, turtle.ST_RISE):
+            turtle.state = state
+            movements = []
+            for tick in range(90):
+                previous_x = turtle.x
+                turtle.update(tick, 30, 120, 1.0)
+                movement = turtle.x - previous_x
+                self.assertGreater(movement, 0)
+                self.assertLessEqual(abs(movement - previous_movement), turtle.dx * 0.03 + 1e-10)
+                previous_movement = movement
+                movements.append(movement)
+            target = 0.7 if state == turtle.ST_REST else 1.0
+            self.assertAlmostEqual(movements[-1] / turtle.dx, target, delta=0.001)
 
 
 if __name__ == "__main__":

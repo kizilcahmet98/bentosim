@@ -57,5 +57,5 @@ Thumbs.db
 /HANDOFF.md
 /REVIEW.md
 
-# Yerel ekran görüntüleri ve görsel karşılaştırmalar
-/screenshots/
+# Yerel debug çıktıları ve geçici dosyalar
+/tmp/

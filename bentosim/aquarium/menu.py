@@ -12,7 +12,8 @@ from ..core import cp, safeadd, cell_width, clip_cells
 from .themes import THEMES, THEME_NAMES
 from .config import BOUNDS, DEFAULT_CFG
 from .art import (
-    SHARK_R, WHALE_R, SHARK_PREVIEW, WHALE_PREVIEW, TURTLE_R, RAY_R, EEL_R,
+    SHARK_R, WHALE_R, SHARK_PREVIEW, WHALE_PREVIEW,
+    TURTLE_R, TURTLE_PREVIEW, RAY_R, EEL_R,
     CRAB_R, OCTOPUS_FRAMES, JELLY_FRAMES,
 )
 
@@ -29,7 +30,9 @@ PREVIEW_ART = {
     "manta":     (RAY_R,             "ray_fish"),
 }
 
-COMPACT_PREVIEW_ART = {"shark": SHARK_PREVIEW, "whale": WHALE_PREVIEW}
+COMPACT_PREVIEW_ART = {
+    "shark": SHARK_PREVIEW, "whale": WHALE_PREVIEW, "turtle": TURTLE_PREVIEW,
+}
 
 
 def draw_menu_frame(win, rows, cols, theme_name):

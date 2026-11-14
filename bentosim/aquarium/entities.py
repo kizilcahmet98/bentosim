@@ -23,7 +23,7 @@ from .art import (
     FISH_DB,
     SHARK_R, SHARK_L,
     WHALE_R, WHALE_L,
-    TURTLE_R, TURTLE_L,
+    TURTLE_R, TURTLE_L, TURTLE_FRAMES_R, TURTLE_FRAMES_L,
     CRAB_R, CRAB_L,
     OCTOPUS_FRAMES,
     build_eel_art,
@@ -516,25 +516,67 @@ class Jellyfish(Entity):
 #  KAPLUMBAĞA
 # ════════════════════════════════════════════════════════════════
 
+TURTLE_SPANS_R = [
+    ((3, 13),),
+    ((0, 18),),
+    ((2, 14),),
+    ((2, 5), (7, 13)),
+]
+TURTLE_SPANS_L = [
+    tuple((len(TURTLE_R[0]) - end, len(TURTLE_R[0]) - start)
+          for start, end in row)
+    for row in TURTLE_SPANS_R
+]
+TURTLE_FRAME_SPANS_R = [
+    TURTLE_SPANS_R,
+    TURTLE_SPANS_R,
+    TURTLE_SPANS_R[:-1] + [((2, 5),)],
+]
+TURTLE_FRAME_SPANS_L = [
+    [tuple((len(TURTLE_R[0]) - end, len(TURTLE_R[0]) - start)
+           for start, end in row) for row in spans]
+    for spans in TURTLE_FRAME_SPANS_R
+]
+
+
 class Turtle(Entity):
     ST_SWIM  = 0
-    ST_REST  = 1
+    ST_REST  = 1   # Kulaç vermeden süzülme.
     ST_RISE  = 2   # nefes almak için yüzeye çıkma
+    SWIM_CYCLE = (0, 1, 2, 1)
+    FRAME_TICKS = 18   # 30 Hz mantık saatinde 2,4 saniyelik yavaş kulaç.
 
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right = random.random() > 0.5
         self.lines = TURTLE_R if self.right else TURTLE_L
+        self.spans = TURTLE_SPANS_R if self.right else TURTLE_SPANS_L
         self.W = max(len(l) for l in self.lines)
         self.H = len(self.lines)
+        mouth = ")" if self.right else "("
+        self.mouth_row, self.mouth_col = next(
+            (row, line.index(mouth)) for row, line in enumerate(self.lines)
+            if mouth in line)
         self.x = float(-self.W-8 if self.right else cols+self.W+8)
         self.base_y = float(random.randint(2, max(2,rows-3-self.H)))
         self.y = self.base_y
         self.dx = random.uniform(0.02,0.09)*spd_mult*(1 if self.right else -1)
+        self.motion_scale = 1.0
         self.phase = random.uniform(0,math.pi*2)
+        # Mevcut fazı kullan: ek rastgele sayı tüketmeden farklı kulaç başlangıçları.
+        self.stroke_tick = int(self.phase / (math.pi * 2)
+                               * self.FRAME_TICKS * len(self.SWIM_CYCLE))
+        self.stroke_tick %= self.FRAME_TICKS * len(self.SWIM_CYCLE)
+        self._set_frame(self.SWIM_CYCLE[self.stroke_tick // self.FRAME_TICKS])
         self.state = self.ST_SWIM
         self.state_cd = random.randint(150,400)
         self.bcd = random.randint(20,60)
+
+    def _set_frame(self, frame):
+        self.frame = frame
+        frames = TURTLE_FRAMES_R if self.right else TURTLE_FRAMES_L
+        spans = TURTLE_FRAME_SPANS_R if self.right else TURTLE_FRAME_SPANS_L
+        self.lines, self.spans = frames[frame], spans[frame]
 
     def update(self, t, rows, cols, spd_mult):
         self.state_cd -= 1
@@ -547,7 +589,12 @@ class Turtle(Entity):
                 self.base_y = max(2.0, self.base_y - random.uniform(2,5))
 
         if self.state != self.ST_REST:
-            self.x += self.dx
+            self.stroke_tick = (self.stroke_tick + 1) % (self.FRAME_TICKS * len(self.SWIM_CYCLE))
+            self._set_frame(self.SWIM_CYCLE[self.stroke_tick // self.FRAME_TICKS])
+        # Kulaç aralarında durmak yerine süzül; hız geçişi aniden sıçramasın.
+        target_scale = 0.7 if self.state == self.ST_REST else 1.0
+        self.motion_scale = lerp(self.motion_scale, target_scale, 0.08)
+        self.x += self.dx * self.motion_scale
         # Su dalgası hareketi
         self.y = self.base_y + math.sin(t*0.045+self.phase)*0.6
         self.y = clamp_swim_y(self.y, rows, self.H)
@@ -566,16 +613,13 @@ class Turtle(Entity):
     def emit_bubble(self):
         if self.bcd <= 0:
             self.bcd = random.randint(20,60)
-            mouth_row = 2
-            mouth_col = self.lines[mouth_row].index(">" if self.right else "<")
             # Başın bir satır üstü: kabarcık ağız çizimini örtmeden yükselir.
-            return Bubble(self.x + mouth_col, self.y + mouth_row - 1)
+            return Bubble(self.x + self.mouth_col, self.y + self.mouth_row - 1)
         return None
 
     def draw(self, win, theme, t):
         attr = cp(theme["turtle"], bold=True)
-        draw_swimming_art(win, self.y, self.x, self.lines, attr,
-                          solid_rows=(0, 1, 2, 3, 4))
+        draw_swimming_art(win, self.y, self.x, self.lines, attr, self.spans)
 
 # ════════════════════════════════════════════════════════════════
 #  YENGEÇ

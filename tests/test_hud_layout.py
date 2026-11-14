@@ -9,6 +9,31 @@ from bentosim.core import cell_width
 
 
 class HudLayoutTests(unittest.TestCase):
+    def test_turtle_preview_uses_full_or_compact_shape_without_partial_drawing(self):
+        for size, expected in (((24, 80), art.TURTLE_R),
+                               ((21, 80), art.TURTLE_PREVIEW),
+                               ((22, 80), art.TURTLE_R),
+                               ((23, 80), art.TURTLE_R),
+                               ((30, 120), art.TURTLE_R),
+                               ((40, 180), art.TURTLE_R),
+                               ((12, 40), None)):
+            with self.subTest(size=size):
+                win = mock.Mock()
+                win.getmaxyx.return_value = size
+                win.getch.side_effect = [menu.curses.KEY_DOWN] * 4 + [10]
+                writes, frames = [], []
+                win.erase.side_effect = writes.clear
+                win.addstr.side_effect = lambda *args: writes.append(args)
+                win.refresh.side_effect = lambda: frames.append(writes[:])
+                with mock.patch.object(menu.curses, "curs_set"), \
+                        mock.patch.object(menu, "cp", return_value=7):
+                    menu.run_menu(win, DEFAULT_CFG.copy())
+                shown = [write for write in frames[-1] if len(write) >= 4 and write[3] == 7]
+                self.assertEqual([write[2] for write in shown], expected or [])
+                for row, col, line, attr in shown:
+                    self.assertLess(row, size[0] - 3)
+                    self.assertLessEqual(col + cell_width(line), size[1] - 1)
+
     def test_large_creature_previews_are_complete_and_keep_footer_clear(self):
         for selection, key in ((2, "shark"), (3, "whale")):
             for rows, cols in ((18, 80), (24, 80), (24, 180), (40, 118),

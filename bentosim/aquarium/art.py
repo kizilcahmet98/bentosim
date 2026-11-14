@@ -3,7 +3,8 @@ bentosim.aquarium.art — ASCII sanat veritabanı.
 
 Sağ-yön (`_R`) tek kaynaktır; sol-yön (`_L`) modül yüklenirken
 ``_mirror()`` ile otomatik üretilir. Yeni canlı eklerken sadece sağ-yön
-çizilir; ``_R`` satırları ``>`` ile bitmelidir (yön işareti).
+çizilir. Küçük balıklarda ``>`` yönü belirtir; diğer canlılarda başın
+konumu siluetin yönünü belirler.
 """
 
 _MIRROR_MAP = str.maketrans({
@@ -122,13 +123,32 @@ WHALE_PREVIEW = [
 
 # ── Deniz kaplumbağası ──
 TURTLE_R = [
-    "   .~~~.    ",
-    "  (. o .)   ",
-    "  |=====|-->",
-    "   '---'    ",
-    "  /| o |    ",
+    "   _..----.._",
+    "-/   /__\\    \\_(·)",
+    "  `-.____,---/",
+    "  /_'  (____/",
 ]
-TURTLE_L = [_mirror(line) for line in TURTLE_R]
+TURTLE_R = _pad_art("\n".join(TURTLE_R)).split("\n")
+TURTLE_L = _mirror("\n".join(TURTLE_R)).split("\n")
+
+# Baş ve kabuk sabit; ön palet aynı erişimle sabit omuzdan yukarı döner.
+# Kalkmış palet karın çizgisinin önünden geçer; arka yüzgeç sabit kalır.
+TURTLE_FRAMES_R = [
+    TURTLE_R,
+    _pad_art("\n".join(TURTLE_R[:2] + [
+        "  `-.____..--/", "  /_'  `.___/"])).split("\n"),
+    _pad_art("\n".join(TURTLE_R[:2] + [
+        "  `-.__(_____/", "  /_'"])).split("\n"),
+]
+TURTLE_FRAMES_L = [_mirror("\n".join(frame)).split("\n")
+                   for frame in TURTLE_FRAMES_R]
+
+TURTLE_PREVIEW = [
+    "   _..---.._",
+    "-/_________\\_(·)",
+    "  /_'  (___/",
+]
+TURTLE_PREVIEW = _pad_art("\n".join(TURTLE_PREVIEW)).split("\n")
 
 
 # ── Yengeç (animasyonlu) ──

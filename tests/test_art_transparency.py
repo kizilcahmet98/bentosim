@@ -21,6 +21,61 @@ class PatternedScreen:
 
 
 class ArtTransparencyTests(unittest.TestCase):
+    def test_turtle_shell_and_flippers_stay_solid_with_clear_limb_gaps(self):
+        water_cells = ((0, 0), (0, 15), (2, 0), (2, 15), (2, 17),
+                       (3, 5), (3, 6), (3, 13), (3, 14), (3, 16))
+        solid_cells = ((1, 3), (1, 4), (1, 9), (1, 11))
+        for right in (False, True):
+            with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                turtle = entities.Turtle(90, 30, 1.0)
+            turtle.x, turtle.y = 3, 3
+            for frame, theme_name, theme in (
+                    (frame, name, theme) for frame in range(len(art.TURTLE_FRAMES_R))
+                    for name, theme in THEMES.items()):
+                turtle._set_frame(frame)
+                before_state = vars(turtle).copy()
+                with self.subTest(right=right, frame=frame, theme=theme_name):
+                    screen = PatternedScreen(30, 90)
+                    before = [row[:] for row in screen.cells]
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        turtle.draw(screen, theme, 0)
+                    for row, col in water_cells + solid_cells:
+                        draw_col = col if right else turtle.W - 1 - col
+                        self.assertEqual(turtle.lines[row][draw_col], " ")
+                        expected = before[3 + row][3 + draw_col] if (row, col) in water_cells else " "
+                        self.assertEqual(screen.cells[3 + row][3 + draw_col], expected,
+                                         (row, col))
+                    # Yukarı dönen paletin altında kalan su/dekor görünür olur.
+                    for col in range(5, 13 if frame == 2 else 7):
+                        draw_col = col if right else turtle.W - 1 - col
+                        self.assertEqual(screen.cells[6][3 + draw_col], before[6][3 + draw_col])
+                    # Eski sarkan yüzgecin alt satırları artık su/dekor alanıdır.
+                    for row in (4, 5):
+                        self.assertEqual(screen.cells[3 + row], before[3 + row])
+                    self.assertEqual(vars(turtle), before_state)
+
+    def test_skull_below_turtle_head_remains_whole_in_both_directions(self):
+        for right in (False, True):
+            with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
+                turtle = entities.Turtle(90, 30, 1.0)
+            turtle.x, turtle.y = 10, 3
+            width = max(map(len, art.SKULL_ART))
+            x = 10 + (14 if right else turtle.W - 14 - width)
+            y = 3 + 2
+            decor = entities.BottomDecor.__new__(entities.BottomDecor)
+            decor.items = [("skull", x, y, art.SKULL_ART)]
+            for frame, theme_name, theme in (
+                    (frame, name, theme) for frame in range(len(art.TURTLE_FRAMES_R))
+                    for name, theme in THEMES.items()):
+                turtle._set_frame(frame)
+                with self.subTest(right=right, frame=frame, theme=theme_name):
+                    screen = PatternedScreen(30, 90)
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        decor.draw(screen, theme, 0)
+                        before = [row[x:x + width] for row in screen.cells[y:y + len(art.SKULL_ART)]]
+                        turtle.draw(screen, theme, 0)
+                    self.assertEqual([row[x:x + width] for row in screen.cells[y:y + len(art.SKULL_ART)]], before)
+
     def test_shark_tail_and_swept_fin_gaps_preserve_background(self):
         water_cells = ((1, 20), (4, 16), (8, 16), (9, 18),
                        (9, 50), (10, 30), (10, 51), (11, 20))
@@ -119,7 +174,6 @@ class ArtTransparencyTests(unittest.TestCase):
     def test_outside_and_limb_gaps_preserve_background_but_bodies_are_solid(self):
         # Sadece bu boş hücreler gövdenin parçası; diğer boşluklar şeffaf olmalı.
         cases = [
-            (entities.Turtle, [art.TURTLE_R], {(1, 4), (1, 6), (4, 4), (4, 6)}),
             (entities.Crab, art.CRAB_R, set()),
             (entities.Octopus, art.OCTOPUS_FRAMES, {(1, 2), (1, 4)}),
             (entities.Jellyfish, art.JELLY_FRAMES, set()),
