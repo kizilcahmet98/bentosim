@@ -28,7 +28,7 @@ from .art import (
     OCTOPUS_FRAMES,
     build_eel_art,
     RAY_R, RAY_L, RAY_FRAMES_R, RAY_FRAMES_L,
-    JELLY_FRAMES,
+    JELLY_BELL, JELLY_FRAMES,
     BUBBLE_CHARS,
     CORAL_DB, ANEMONE, STARFISH_ART,
     TREASURE_ART, ROCK_ART, SKULL_ART, ANCHOR_ART,
@@ -469,7 +469,8 @@ class Jellyfish(Entity):
         super().__init__()
         # Her denizanasının kendi pulsing renk döngüsü var
         self.x = float(random.randint(3, max(4,cols-12)))
-        self.base_y = float(random.randint(2, max(3,rows-9)))
+        height = len(JELLY_FRAMES[0])
+        self.base_y = float(random.randint(2, max(3, rows - 4 - height)))
         self.y = self.base_y
         self.phase  = random.uniform(0,math.pi*2)
         self.dx     = random.uniform(-0.04,0.04)
@@ -487,7 +488,7 @@ class Jellyfish(Entity):
         self.x += self.dx + math.sin(t*0.22+self.phase)*0.04
         self.y  = self.base_y + math.sin(t*self.freq+self.phase)*self.amp
         self.x  = max(1.0, min(float(cols-12), self.x))
-        self.y  = max(2.0, min(float(rows-8), self.y))
+        self.y  = clamp_swim_y(self.y, rows, len(JELLY_FRAMES[self.frame]))
         self.fcd -= 1
         if self.fcd <= 0:
             self.frame = (self.frame+1) % len(JELLY_FRAMES)
@@ -508,9 +509,10 @@ class Jellyfish(Entity):
         for i,line in enumerate(frame):
             if y + i >= rows - 3:
                 break
-            a = cp(jc, bold=True) if i <= 1 else cp(dark_jc, dim=True)
+            is_bell = i < len(JELLY_BELL)
+            a = cp(jc, bold=True) if is_bell else cp(dark_jc, dim=True)
             draw_art_shape(win, y+i, self.x, [line], a,
-                           solid_rows=(0,) if i <= 1 else ())
+                           solid_rows=(0,) if is_bell else ())
 
 # ════════════════════════════════════════════════════════════════
 #  KAPLUMBAĞA

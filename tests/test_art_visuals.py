@@ -405,7 +405,7 @@ class MantaSwimmingAnimationTests(unittest.TestCase):
 class JellyfishPulseVisualTests(unittest.TestCase):
     def test_pulse_changes_visible_colors_in_every_theme_and_frame(self):
         jelly = entities.Jellyfish(80, 24)
-        jelly.x, jelly.y = 3, 2
+        jelly.x, jelly.y = 3, 3
         for name, theme in THEMES.items():
             for frame in range(len(art.JELLY_FRAMES)):
                 with self.subTest(theme=name, frame=frame):
@@ -414,23 +414,28 @@ class JellyfishPulseVisualTests(unittest.TestCase):
                     for phase in (-math.pi / 2, math.pi / 2, 3 * math.pi / 2):
                         jelly.pulse_t = phase
                         win = mock.Mock()
-                        win.getmaxyx.return_value = (12, 40)
+                        win.getmaxyx.return_value = (24, 80)
                         with mock.patch.object(entities, "cp", return_value=0) as color:
                             jelly.draw(win, theme, 0)
                         head = color.call_args_list[0][0][0]
-                        tentacles = color.call_args_list[2][0][0]
+                        tentacles = color.call_args_list[len(art.JELLY_BELL)][0][0]
                         for rgb in (head, tentacles):
                             self.assertTrue(all(0 <= c <= base <= 255
                                                 for c, base in zip(rgb, theme["jelly"])))
                         self.assertTrue(all(t <= h for t, h in zip(tentacles, head)))
                         self.assertEqual(color.call_args_list[0][1], {"bold": True})
-                        self.assertEqual(color.call_args_list[2][1], {"dim": True})
+                        for row, call in enumerate(color.call_args_list):
+                            self.assertEqual(call[1], {"bold": True} if row < len(art.JELLY_BELL)
+                                             else {"dim": True})
                         drawn = {(y - int(jelly.y), x + offset - int(jelly.x)): ch
                                  for (y, x, text, attr), _ in win.addstr.call_args_list
                                  for offset, ch in enumerate(text)}
                         expected = {(row, col): ch
                                     for row, line in enumerate(art.JELLY_FRAMES[frame])
-                                    for col, ch in enumerate(line) if ch != " "}
+                                    for col, ch in enumerate(line)
+                                    if ch != " " or (row < len(art.JELLY_BELL)
+                                                     and len(line) - len(line.lstrip()) <= col
+                                                     <= len(line.rstrip()) - 1)}
                         self.assertEqual(drawn, expected)
                         phases.append((head, tentacles))
                     self.assertEqual(phases[0], phases[2])
@@ -460,6 +465,22 @@ class JellyfishPulseVisualTests(unittest.TestCase):
 
 class SwimmingBoundsVisualTests(unittest.TestCase):
     CLASSES = (entities.Shark, entities.Whale, entities.Turtle, entities.MantaRay)
+
+    def test_jellyfish_bell_and_tentacles_fit_spawn_and_update_depths(self):
+        for rows in (14, 24, 40):
+            with self.subTest(rows=rows):
+                with mock.patch.object(entities.random, "randint", side_effect=lambda lo, hi: hi):
+                    jelly = entities.Jellyfish(80, rows)
+                height = len(art.JELLY_FRAMES[jelly.frame])
+                self.assertGreaterEqual(jelly.y, 2)
+                self.assertLessEqual(jelly.y + height, rows - 3)
+                for frame in range(len(art.JELLY_FRAMES)):
+                    jelly.frame = frame
+                    for depth in (-100, 100):
+                        jelly.base_y = depth
+                        jelly.update(0, rows, 80)
+                        self.assertGreaterEqual(jelly.y, 2)
+                        self.assertLessEqual(jelly.y + len(art.JELLY_FRAMES[frame]), rows - 3)
 
     def test_all_fish_preserve_sand_and_state_when_resized_without_update(self):
         for idx in range(len(art.FISH_DB)):
