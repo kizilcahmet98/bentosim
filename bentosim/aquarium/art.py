@@ -183,13 +183,25 @@ EEL_L = [_mirror(line) for line in EEL_R]
 
 # ── Işın balığı (manta ray) ──
 RAY_R = [
-    "   /\\ /\\ ",
-    "  ( ·· )->",
-    "  /----/  ",
-    "    ||    ",
+    "       _.",
+    "       \\ `-._",
+    "        \\    `--._",
+    "~--..___(      · _)",
+    "        /    _..-'",
+    "       / _.-'",
+    "       `'",
 ]
 RAY_R = _pad_art('\n'.join(RAY_R)).split('\n')
 RAY_L = _mirror('\n'.join(RAY_R)).split('\n')
+
+RAY_PREVIEW = [
+    "      _.",
+    "      \\ `--.._",
+    "~--..__(    · _)",
+    "      / _..-'",
+    "      `'",
+]
+RAY_PREVIEW = _pad_art('\n'.join(RAY_PREVIEW)).split('\n')
 
 
 # ── Denizanası (yön ayrımı yok) ──

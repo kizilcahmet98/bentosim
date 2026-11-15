@@ -752,8 +752,9 @@ class MantaRay(Entity):
         self.right=random.random()>0.5
         self.lines=RAY_R if self.right else RAY_L
         self.W=max(len(l) for l in self.lines)
+        self.H=len(self.lines)
         self.x=float(-self.W-8 if self.right else cols+self.W+8)
-        self.base_y=float(random.randint(3,max(4,rows-8)))
+        self.base_y=float(random.randint(2,max(2,rows-3-self.H)))
         self.y=self.base_y
         self.dx=random.uniform(0.04,0.14)*spd_mult*(1 if self.right else -1)
         self.phase=random.uniform(0,math.pi*2)
@@ -761,12 +762,12 @@ class MantaRay(Entity):
     def update(self, t, rows, cols, spd_mult):
         self.x+=self.dx
         self.y=self.base_y+math.sin(t*0.04+self.phase)*2.0
-        self.y=max(2.0,min(float(rows-8),self.y))
+        self.y=clamp_swim_y(self.y, rows, self.H)
         if self.x>cols+self.W+15 or self.x<-self.W-15: self.dead=True
 
     def draw(self, win, theme, t):
         attr=cp(theme["ray_fish"],bold=True)
-        draw_swimming_art(win, self.y, self.x, self.lines, attr, solid_rows=(1, 2))
+        draw_swimming_art(win, self.y, self.x, self.lines, attr, solid_rows=(1, 2, 3, 4, 5))
 
 # ════════════════════════════════════════════════════════════════
 #  KABARCIK

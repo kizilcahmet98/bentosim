@@ -15,7 +15,7 @@ class MirrorAlignmentVisualTests(unittest.TestCase):
         self.assertEqual(art._mirror(""), "")
 
     def test_manta_and_large_fish_have_correct_left_decoration_positions(self):
-        self.assertEqual(art.RAY_L[0], "  /\\ /\\   ")
+        self.assertEqual(art.RAY_L[0], "          ._       ")
         expected_tops = {"büyük": "     °    ", "dev": "   · · ·  "}
         for index, (_, left, _, name) in enumerate(art.FISH_DB):
             if name not in expected_tops:
@@ -389,7 +389,7 @@ class JellyfishPulseVisualTests(unittest.TestCase):
 
 
 class SwimmingBoundsVisualTests(unittest.TestCase):
-    CLASSES = (entities.Shark, entities.Whale, entities.Turtle)
+    CLASSES = (entities.Shark, entities.Whale, entities.Turtle, entities.MantaRay)
 
     def test_all_fish_preserve_sand_and_state_when_resized_without_update(self):
         for idx in range(len(art.FISH_DB)):
@@ -416,7 +416,8 @@ class SwimmingBoundsVisualTests(unittest.TestCase):
     def test_spawned_and_updated_creatures_stay_above_sand(self):
         cases = [(cls, right) for cls in self.CLASSES for right in (False, True)]
         for cls, right in cases:
-            height = len(getattr(art, cls.__name__.upper() + "_R"))
+            art_name = "RAY" if cls is entities.MantaRay else cls.__name__.upper()
+            height = len(getattr(art, art_name + "_R"))
             for rows in (height + 5, 24, 40):
                 with self.subTest(creature=cls.__name__, rows=rows, right=right):
                     # En derin doğma konumunu seç.

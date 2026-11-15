@@ -177,7 +177,11 @@ class ArtTransparencyTests(unittest.TestCase):
             (entities.Crab, art.CRAB_R, set()),
             (entities.Octopus, art.OCTOPUS_FRAMES, {(1, 2), (1, 4)}),
             (entities.Jellyfish, art.JELLY_FRAMES, set()),
-            (entities.MantaRay, [art.RAY_R], {(1, 3), (1, 6)}),
+            (entities.MantaRay, [art.RAY_R], {
+                (1, 8), (2, 9), (2, 10), (2, 11), (2, 12),
+                (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 14), (3, 16),
+                (4, 9), (4, 10), (4, 11), (4, 12), (5, 8),
+            }),
         ]
         directional = (entities.Turtle, entities.Crab, entities.MantaRay)
         for cls, frames, body_spaces in cases:
@@ -206,9 +210,13 @@ class ArtTransparencyTests(unittest.TestCase):
                                         # mevcut pencerenin zeminine ve kenarlarına bağlıdır.
                                         draw_x = max(1, min(cols - 10, x))
                                         draw_y = rows - 4
+                                    else:
+                                        draw_y = int(entities.clamp_swim_y(creature.y, rows, len(lines)))
                                     screen = PatternedScreen(rows, cols)
                                     expected = [line[:] for line in screen.cells]
                                     for row, line in enumerate(lines):
+                                        if cls is not entities.Crab and draw_y + row >= rows - 3:
+                                            continue
                                         for col, ch in enumerate(line):
                                             if ch == " " and (row, col) not in spaces:
                                                 continue
@@ -217,6 +225,26 @@ class ArtTransparencyTests(unittest.TestCase):
                                     with mock.patch.object(entities, "cp", return_value=0):
                                         creature.draw(screen, THEMES[theme_name], 0)
                                     self.assertEqual(screen.cells, expected)
+
+    def test_coral_below_manta_rear_wing_remains_whole(self):
+        coral = art.CORAL_DB[1]
+        width = max(map(len, coral))
+        for right in (False, True):
+            with mock.patch.object(entities.random, "random", return_value=float(right)):
+                manta = entities.MantaRay(90, 30, 1.0)
+            manta.x, manta.y = 10, 3
+            x = 10 if right else 10 + manta.W - width
+            y = 7
+            decor = entities.BottomDecor.__new__(entities.BottomDecor)
+            decor.items = [("coral", x, y, coral)]
+            for theme_name, theme in THEMES.items():
+                with self.subTest(right=right, theme=theme_name):
+                    screen = PatternedScreen(30, 90)
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        decor.draw(screen, theme, 0)
+                        before = [row[x:x + width] for row in screen.cells[y:y + len(coral)]]
+                        manta.draw(screen, theme, 0)
+                    self.assertEqual([row[x:x + width] for row in screen.cells[y:y + len(coral)]], before)
 
 
 if __name__ == "__main__":
