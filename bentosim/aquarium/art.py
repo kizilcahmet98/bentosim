@@ -194,6 +194,21 @@ RAY_R = [
 RAY_R = _pad_art('\n'.join(RAY_R)).split('\n')
 RAY_L = _mirror('\n'.join(RAY_R)).split('\n')
 
+# Baş/kuyruk ve kanat kökleri sabit; kanatlar aynı yatay erişimle bükülür.
+RAY_FRAMES_R = [
+    RAY_R,
+    _pad_art('\n'.join([
+        "",
+        "       _..-._",
+        RAY_R[2],
+        RAY_R[3],
+        RAY_R[4],
+        "       `-..-'",
+        "",
+    ])).split('\n'),
+]
+RAY_FRAMES_L = [_mirror('\n'.join(frame)).split('\n') for frame in RAY_FRAMES_R]
+
 RAY_PREVIEW = [
     "      _.",
     "      \\ `--.._",

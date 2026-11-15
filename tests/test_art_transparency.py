@@ -173,26 +173,32 @@ class ArtTransparencyTests(unittest.TestCase):
 
     def test_outside_and_limb_gaps_preserve_background_but_bodies_are_solid(self):
         # Sadece bu boş hücreler gövdenin parçası; diğer boşluklar şeffaf olmalı.
+        manta_spaces = {
+            (1, 8), (2, 9), (2, 10), (2, 11), (2, 12),
+            (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 14), (3, 16),
+            (4, 9), (4, 10), (4, 11), (4, 12), (5, 8),
+        }
         cases = [
-            (entities.Crab, art.CRAB_R, set()),
-            (entities.Octopus, art.OCTOPUS_FRAMES, {(1, 2), (1, 4)}),
-            (entities.Jellyfish, art.JELLY_FRAMES, set()),
-            (entities.MantaRay, [art.RAY_R], {
-                (1, 8), (2, 9), (2, 10), (2, 11), (2, 12),
-                (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 14), (3, 16),
-                (4, 9), (4, 10), (4, 11), (4, 12), (5, 8),
-            }),
+            (entities.Crab, art.CRAB_R, [set()] * len(art.CRAB_R)),
+            (entities.Octopus, art.OCTOPUS_FRAMES, [{(1, 2), (1, 4)}] * len(art.OCTOPUS_FRAMES)),
+            (entities.Jellyfish, art.JELLY_FRAMES, [set()] * len(art.JELLY_FRAMES)),
+            (entities.MantaRay, art.RAY_FRAMES_R, [
+                manta_spaces,
+                {(row, col) for row, col in manta_spaces if row not in (1, 5)},
+            ]),
         ]
         directional = (entities.Turtle, entities.Crab, entities.MantaRay)
-        for cls, frames, body_spaces in cases:
+        for cls, frames, frame_spaces in cases:
             for right in ((False, True) if cls in directional else (True,)):
                 with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
                     creature = cls(80, 24, 1.0) if cls in directional else cls(80, 24)
                 for frame_index, right_lines in enumerate(frames):
-                    if hasattr(creature, "frame"):
+                    if cls is entities.MantaRay:
+                        creature._set_frame(frame_index)
+                    elif hasattr(creature, "frame"):
                         creature.frame = frame_index
                     lines = right_lines
-                    spaces = body_spaces
+                    spaces = body_spaces = frame_spaces[frame_index]
                     if not right:
                         width = max(map(len, right_lines))
                         lines = [line.translate(art._MIRROR_MAP)[::-1] for line in right_lines]
@@ -237,8 +243,11 @@ class ArtTransparencyTests(unittest.TestCase):
             y = 7
             decor = entities.BottomDecor.__new__(entities.BottomDecor)
             decor.items = [("coral", x, y, coral)]
-            for theme_name, theme in THEMES.items():
-                with self.subTest(right=right, theme=theme_name):
+            for frame, theme_name, theme in ((frame, name, theme)
+                                           for frame in range(len(art.RAY_FRAMES_R))
+                                           for name, theme in THEMES.items()):
+                manta._set_frame(frame)
+                with self.subTest(right=right, frame=frame, theme=theme_name):
                     screen = PatternedScreen(30, 90)
                     with mock.patch.object(entities, "cp", return_value=0):
                         decor.draw(screen, theme, 0)

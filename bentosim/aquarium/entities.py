@@ -27,7 +27,7 @@ from .art import (
     CRAB_R, CRAB_L,
     OCTOPUS_FRAMES,
     build_eel_art,
-    RAY_R, RAY_L,
+    RAY_R, RAY_L, RAY_FRAMES_R, RAY_FRAMES_L,
     JELLY_FRAMES,
     BUBBLE_CHARS,
     CORAL_DB, ANEMONE, STARFISH_ART,
@@ -747,6 +747,9 @@ class Eel(Entity):
 # ════════════════════════════════════════════════════════════════
 
 class MantaRay(Entity):
+    SWIM_CYCLE = (0, 1)
+    FRAME_TICKS = 24   # 30 Hz mantık saatinde 1,6 saniyelik iki pozlu döngü.
+
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right=random.random()>0.5
@@ -758,8 +761,18 @@ class MantaRay(Entity):
         self.y=self.base_y
         self.dx=random.uniform(0.04,0.14)*spd_mult*(1 if self.right else -1)
         self.phase=random.uniform(0,math.pi*2)
+        # Mevcut fazı kullan; animasyon ek davranış RNG'si tüketmesin.
+        cycle_ticks = self.FRAME_TICKS * len(self.SWIM_CYCLE)
+        self.stroke_tick = int(self.phase / (math.pi * 2) * cycle_ticks) % cycle_ticks
+        self._set_frame(self.SWIM_CYCLE[self.stroke_tick // self.FRAME_TICKS])
+
+    def _set_frame(self, frame):
+        self.frame = frame
+        self.lines = (RAY_FRAMES_R if self.right else RAY_FRAMES_L)[frame]
 
     def update(self, t, rows, cols, spd_mult):
+        self.stroke_tick = (self.stroke_tick + 1) % (self.FRAME_TICKS * len(self.SWIM_CYCLE))
+        self._set_frame(self.SWIM_CYCLE[self.stroke_tick // self.FRAME_TICKS])
         self.x+=self.dx
         self.y=self.base_y+math.sin(t*0.04+self.phase)*2.0
         self.y=clamp_swim_y(self.y, rows, self.H)

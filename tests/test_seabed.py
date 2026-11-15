@@ -83,12 +83,15 @@ class SwimmingResizeTests(unittest.TestCase):
     def test_remaining_swimmers_preserve_sand_and_paused_state_in_all_frames(self):
         cases = [(entities.Jellyfish, True, frame) for frame in range(len(art.JELLY_FRAMES))]
         cases += [(entities.Octopus, True, frame) for frame in range(len(art.OCTOPUS_FRAMES))]
-        cases += [(cls, right, None) for cls in (entities.Eel, entities.MantaRay)
-                  for right in (False, True)]
+        cases += [(entities.Eel, right, None) for right in (False, True)]
+        cases += [(entities.MantaRay, right, frame) for right in (False, True)
+                  for frame in range(len(art.RAY_FRAMES_R))]
         for cls, right, frame in cases:
             with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1):
                 creature = cls(100, 40) if cls in (entities.Jellyfish, entities.Octopus) else cls(100, 40, 1.0)
-            if frame is not None:
+            if cls is entities.MantaRay:
+                creature._set_frame(frame)
+            elif frame is not None:
                 creature.frame = frame
             for y in (7, 25):
                 creature.x, creature.y = 2, y

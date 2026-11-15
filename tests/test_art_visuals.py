@@ -37,6 +37,8 @@ class MirrorAlignmentVisualTests(unittest.TestCase):
                            "\n".join(getattr(art, name + "_L"))))
         for index, (right, left) in enumerate(zip(art.CRAB_R, art.CRAB_L)):
             shapes.append(("crab frame {}".format(index), "\n".join(right), "\n".join(left)))
+        for index, (right, left) in enumerate(zip(art.RAY_FRAMES_R, art.RAY_FRAMES_L)):
+            shapes.append(("manta frame {}".format(index), "\n".join(right), "\n".join(left)))
         for name, right, left in shapes:
             with self.subTest(shape=name):
                 width = max(map(len, right.split("\n")))
@@ -330,6 +332,74 @@ class TurtleSwimmingAnimationTests(unittest.TestCase):
             self.assertEqual(self.render(turtle, t), expected)
         self.assertEqual(vars(turtle), before)
         self.assertEqual(entities.random.getstate(), rng_before)
+
+
+class MantaSwimmingAnimationTests(unittest.TestCase):
+    def make_manta(self, right):
+        with mock.patch.object(entities.random, "random", return_value=float(right)), \
+                mock.patch.object(entities.random, "uniform", side_effect=(0.08, 0.0)):
+            manta = entities.MantaRay(120, 30, 1.0)
+        manta.x, manta.y, manta.base_y = 40.0, 6.0, 6.0
+        return manta
+
+    def render(self, manta, t=0):
+        win = mock.Mock()
+        win.getmaxyx.return_value = (30, 120)
+        with mock.patch.object(entities, "cp", return_value=0):
+            manta.draw(win, THEMES["realistic"], t)
+        return {(y - int(manta.y), x - int(manta.x) + offset): ch
+                for (y, x, text, attr), _ in win.addstr.call_args_list
+                for offset, ch in enumerate(text)}
+
+    def test_stroke_moves_wings_with_a_fixed_body_and_returns_after_1_6_seconds(self):
+        for right in (False, True):
+            manta = self.make_manta(right)
+            initial = self.render(manta)
+            body = {pos: ch for pos, ch in initial.items() if pos[0] == 3}
+            poses = {tuple(sorted(initial.items()))}
+            for tick in range(1, 49):
+                manta.update(tick / 30, 30, 120, 1.0)
+                rendered = self.render(manta)
+                poses.add(tuple(sorted(rendered.items())))
+                self.assertEqual({pos: ch for pos, ch in rendered.items() if pos[0] == 3}, body)
+                self.assertEqual((manta.W, manta.H), (19, 7))
+            self.assertEqual(len(poses), 2)
+            self.assertEqual(self.render(manta), initial)
+
+    def test_wings_bend_with_fixed_joints_and_horizontal_reach(self):
+        for right, frames in ((True, art.RAY_FRAMES_R), (False, art.RAY_FRAMES_L)):
+            top_rows, bottom_rows = set(), set()
+            col = (lambda x: x) if right else (lambda x: 18 - x)
+            for frame in frames:
+                self.assertEqual(len(frame), 7)
+                self.assertTrue(all(cell_width(line) == 19 for line in frame))
+                self.assertEqual(frame[3], (art.RAY_R if right else art.RAY_L)[3])
+                self.assertEqual(frame[2][col(8)], "\\" if right else "/")
+                self.assertEqual(frame[4][col(8)], "/" if right else "\\")
+                self.assertEqual(frame[2][col(17)], "_")
+                self.assertEqual(frame[4][col(17)], "'")
+                for rows in (range(3), range(4, 7)):
+                    wing = [(row, x) for row in rows for x in range(19)
+                            if frame[row][col(x)] != " "]
+                    self.assertEqual(min(x for row, x in wing), 7)
+                    self.assertEqual(max(x for row, x in wing), 17)
+                    if rows.start == 0:
+                        top_rows.add(min(row for row, x in wing))
+                    else:
+                        bottom_rows.add(max(row for row, x in wing))
+            self.assertEqual(top_rows, {0, 1})
+            self.assertEqual(bottom_rows, {5, 6})
+
+    def test_drawing_does_not_advance_the_stroke_or_behavior_randomness(self):
+        for right in (False, True):
+            manta = self.make_manta(right)
+            before = copy.deepcopy(vars(manta))
+            rng_before = entities.random.getstate()
+            expected = self.render(manta)
+            for t in (0, 10, 1000, 100000):
+                self.assertEqual(self.render(manta, t), expected)
+            self.assertEqual(vars(manta), before)
+            self.assertEqual(entities.random.getstate(), rng_before)
 
 
 class JellyfishPulseVisualTests(unittest.TestCase):
