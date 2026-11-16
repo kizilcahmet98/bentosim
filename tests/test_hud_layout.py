@@ -9,7 +9,7 @@ from bentosim.core import cell_width
 
 
 class HudLayoutTests(unittest.TestCase):
-    def test_turtle_and_manta_previews_use_complete_full_or_compact_shapes(self):
+    def test_creature_previews_use_complete_full_or_compact_shapes(self):
         cases = [(4, size, expected) for size, expected in (
             ((24, 80), art.TURTLE_R), ((21, 80), art.TURTLE_PREVIEW),
             ((22, 80), art.TURTLE_R), ((23, 80), art.TURTLE_R),
@@ -20,6 +20,12 @@ class HudLayoutTests(unittest.TestCase):
             ((25, 80), art.RAY_R), ((26, 80), art.RAY_R),
             ((30, 120), art.RAY_R), ((40, 180), art.RAY_R),
             ((22, 80), None), ((12, 40), None),
+        )]
+        cases += [(7, size, expected) for size, expected in (
+            ((24, 80), art.OCTOPUS_FRAMES[0]), ((23, 80), art.OCTOPUS_PREVIEW),
+            ((25, 80), art.OCTOPUS_FRAMES[0]), ((26, 80), art.OCTOPUS_FRAMES[0]),
+            ((30, 120), art.OCTOPUS_FRAMES[0]), ((40, 180), art.OCTOPUS_FRAMES[0]),
+            ((22, 80), art.OCTOPUS_PREVIEW), ((21, 80), None), ((12, 40), None),
         )]
         for selection, size, expected in cases:
             with self.subTest(selection=selection, size=size):

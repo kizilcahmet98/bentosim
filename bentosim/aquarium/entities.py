@@ -25,7 +25,7 @@ from .art import (
     WHALE_R, WHALE_L,
     TURTLE_R, TURTLE_L, TURTLE_FRAMES_R, TURTLE_FRAMES_L,
     CRAB_R, CRAB_L,
-    OCTOPUS_FRAMES,
+    OCTOPUS_BODY, OCTOPUS_FRAMES,
     build_eel_art,
     RAY_R, RAY_L, RAY_FRAMES_R, RAY_FRAMES_L,
     JELLY_BELL, JELLY_FRAMES,
@@ -681,14 +681,23 @@ class Crab(Entity):
 # ════════════════════════════════════════════════════════════════
 
 class Octopus(Entity):
+    ARM_CYCLE = (0, 1, 0, 2)
+    FRAME_TICKS = 12  # 30 Hz saatinde 1,6 saniyelik sağ/sol kol dalgası.
+
     def __init__(self, cols, rows):
         super().__init__()
-        self.x = float(random.randint(4,max(5,cols-12)))
-        self.base_y = float(random.randint(3,max(4,rows-8)))
+        self.W = max(cell_width(line) for line in OCTOPUS_FRAMES[0])
+        self.H = len(OCTOPUS_FRAMES[0])
+        self.x = float(random.randint(4, max(5, cols - 1 - self.W)))
+        self.base_y = clamp_swim_y(
+            float(random.randint(3, max(4, rows - 4 - self.H))), rows, self.H)
         self.y = self.base_y
         self.dx = random.uniform(-0.035,0.035)
         self.phase = random.uniform(0,math.pi*2)
-        self.frame=0; self.fcd=random.randint(12,25)
+        self.arm_step = int(self.phase / (math.pi * 2) * len(self.ARM_CYCLE))
+        self.arm_step %= len(self.ARM_CYCLE)
+        self.frame = self.ARM_CYCLE[self.arm_step]
+        self.fcd = random.randint(1, self.FRAME_TICKS)
         self.ttl=random.randint(500,1100); self.age=0
         # "mürekkep" patlaması
         self.ink_cd=random.randint(200,500); self.inking=False; self.ink_t=0
@@ -698,10 +707,13 @@ class Octopus(Entity):
         if self.age>=self.ttl: self.dead=True
         self.x+=self.dx+math.sin(t*0.18+self.phase)*0.06
         self.y=self.base_y+math.sin(t*0.06+self.phase)*1.1
-        self.x=max(2.0,min(float(cols-12),self.x))
-        self.y=max(2.0,min(float(rows-7),self.y))
+        self.x=max(2.0,min(float(cols - 1 - self.W),self.x))
+        self.y=clamp_swim_y(self.y, rows, self.H)
         self.fcd-=1
-        if self.fcd<=0: self.frame=(self.frame+1)%2; self.fcd=random.randint(12,25)
+        if self.fcd <= 0:
+            self.arm_step = (self.arm_step + 1) % len(self.ARM_CYCLE)
+            self.frame = self.ARM_CYCLE[self.arm_step]
+            self.fcd = self.FRAME_TICKS
         self.ink_cd-=1
         if self.ink_cd<=0 and not self.inking:
             self.inking=True; self.ink_t=30
@@ -714,7 +726,8 @@ class Octopus(Entity):
         col = theme["octo"] if not self.inking else tuple(max(0,c-80) for c in theme["octo"])
         attr=cp(col,bold=True)
         frame=OCTOPUS_FRAMES[self.frame]
-        draw_swimming_art(win, self.y, self.x, frame, attr, solid_rows=(0, 1))
+        draw_swimming_art(win, self.y, self.x, frame, attr,
+                          solid_rows=range(len(OCTOPUS_BODY)))
 
 # ════════════════════════════════════════════════════════════════
 #  YILAN BALIĞI

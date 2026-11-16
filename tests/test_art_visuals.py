@@ -463,24 +463,143 @@ class JellyfishPulseVisualTests(unittest.TestCase):
         self.assertLessEqual(len(colors), 10)
 
 
+class OctopusSilhouetteVisualTests(unittest.TestCase):
+    def test_arms_bend_with_fixed_roots_and_consistent_reach(self):
+        octopus = entities.Octopus(80, 24)
+        octopus.x, octopus.y = 3, 3
+        reference_arms = None
+        poses = set()
+        body_height = len(art.OCTOPUS_BODY)
+        for frame in range(len(art.OCTOPUS_FRAMES)):
+            octopus.frame = frame
+            win = mock.Mock()
+            win.getmaxyx.return_value = (24, 80)
+            with mock.patch.object(entities, "cp", return_value=0):
+                octopus.draw(win, THEMES["realistic"], 0)
+            cells = {(y - 3, x - 3 + offset)
+                     for (y, x, text, attr), _ in win.addstr.call_args_list
+                     for offset, ch in enumerate(text) if ch != " "}
+            with self.subTest(frame=frame):
+                arms = {(row, col) for row, col in cells if row >= body_height}
+                self.assertTrue(arms)
+                if reference_arms is None:
+                    reference_arms = arms
+                self.assertEqual(len(arms), len(reference_arms))
+                self.assertEqual((min(col for row, col in arms), max(col for row, col in arms)),
+                                 (min(col for row, col in reference_arms),
+                                  max(col for row, col in reference_arms)))
+                self.assertEqual(art.OCTOPUS_FRAMES[frame][body_height],
+                                 art.OCTOPUS_FRAMES[0][body_height])
+                # Kol uçları bükülürken dört ayrı kıvrım ve uzunlukları korunur.
+                tips = art.OCTOPUS_FRAMES[frame][-1].split()
+                self.assertEqual(len(tips), 4)
+                self.assertEqual([len(tip) for tip in tips], [3] * 4)
+                poses.add(frozenset(arms))
+                roots = {(row, col) for row, col in cells if row == body_height - 1}
+                # Eğik kol çizgileri de gövdeye komşu hücrelerle bağlı kalmalı.
+                allowed = arms | roots
+                pending, reached = list(roots), set(roots)
+                while pending:
+                    row, col = pending.pop()
+                    for dy in (-1, 0, 1):
+                        for dx in (-1, 0, 1):
+                            neighbor = row + dy, col + dx
+                            if neighbor in allowed and neighbor not in reached:
+                                reached.add(neighbor)
+                                pending.append(neighbor)
+                self.assertTrue(arms <= reached)
+        self.assertEqual(len(poses), 3)
+
+    def test_arm_cycle_bends_two_rows_and_only_advances_during_updates(self):
+        octopus = entities.Octopus(80, 24)
+        octopus.arm_step, octopus.frame, octopus.fcd = 0, 0, octopus.FRAME_TICKS
+
+        def render():
+            octopus.x, octopus.y = 3, 3
+            win = mock.Mock()
+            win.getmaxyx.return_value = (24, 80)
+            with mock.patch.object(entities, "cp", return_value=0):
+                octopus.draw(win, THEMES["realistic"], 0)
+            return {(y - 3, x - 3 + offset): ch
+                    for (y, x, text, attr), _ in win.addstr.call_args_list
+                    for offset, ch in enumerate(text)}
+
+        initial = render()
+        first_arm_row = len(art.OCTOPUS_BODY)
+        for tick in range(1, octopus.FRAME_TICKS * 4 + 1):
+            octopus.update(tick / 30, 24, 80)
+            self.assertEqual(octopus.frame, (0, 1, 0, 2)[(tick // 12) % 4])
+            drawn = render()
+            before, rng = copy.deepcopy(vars(octopus)), entities.random.getstate()
+            self.assertEqual(render(), drawn)
+            self.assertEqual(render(), drawn)
+            self.assertEqual(vars(octopus), before)
+            self.assertEqual(entities.random.getstate(), rng)
+            if octopus.frame in (1, 2):
+                # Sadece glif değişimi değil, iki kol satırında gerçek hücre hareketi.
+                changed = set(initial) ^ set(drawn)
+                self.assertEqual({row for row, col in changed},
+                                 {first_arm_row + 1, first_arm_row + 2})
+                self.assertTrue(any(col < octopus.W // 2 for row, col in changed))
+                self.assertTrue(any(col > octopus.W // 2 for row, col in changed))
+        self.assertEqual(render(), initial)
+
+    def test_eyes_and_head_stay_fixed_while_arms_change(self):
+        octopus = entities.Octopus(80, 24)
+        head = None
+        arm_poses = set()
+        frames = set()
+        with mock.patch.object(entities, "cp", return_value=0):
+            for tick in range(80):
+                octopus.update(tick, 24, 80)
+                # Konum değişimini çıkarıp sadece aynı hücredeki pozu karşılaştır.
+                octopus.x, octopus.y = 3, 3
+                win = mock.Mock()
+                win.getmaxyx.return_value = (24, 80)
+                octopus.draw(win, THEMES["realistic"], tick)
+                cells = {(y - 3, x - 3 + offset): ch
+                         for (y, x, text, attr), _ in win.addstr.call_args_list
+                         for offset, ch in enumerate(text)}
+                current_head = {pos: ch for pos, ch in cells.items()
+                                if pos[0] < len(art.OCTOPUS_BODY)}
+                if head is None:
+                    head = current_head
+                self.assertEqual(current_head, head)
+                self.assertEqual(sum(ch == "·" for ch in current_head.values()), 2)
+                arm_poses.add(tuple(sorted((pos, ch) for pos, ch in cells.items()
+                                           if pos[0] >= len(art.OCTOPUS_BODY))))
+                frames.add(octopus.frame)
+        self.assertEqual(frames, {0, 1, 2})
+        self.assertEqual(len(arm_poses), 3)
+
+
 class SwimmingBoundsVisualTests(unittest.TestCase):
     CLASSES = (entities.Shark, entities.Whale, entities.Turtle, entities.MantaRay)
 
-    def test_jellyfish_bell_and_tentacles_fit_spawn_and_update_depths(self):
-        for rows in (14, 24, 40):
-            with self.subTest(rows=rows):
+    def test_jellyfish_and_octopus_fit_spawn_and_update_bounds(self):
+        cases = ((entities.Jellyfish, art.JELLY_FRAMES),
+                 (entities.Octopus, art.OCTOPUS_FRAMES))
+        for cls, frames, rows in ((cls, frames, rows) for cls, frames in cases
+                                  for rows in (14, 24, 40)):
+            with self.subTest(creature=cls.__name__, rows=rows):
                 with mock.patch.object(entities.random, "randint", side_effect=lambda lo, hi: hi):
-                    jelly = entities.Jellyfish(80, rows)
-                height = len(art.JELLY_FRAMES[jelly.frame])
-                self.assertGreaterEqual(jelly.y, 2)
-                self.assertLessEqual(jelly.y + height, rows - 3)
-                for frame in range(len(art.JELLY_FRAMES)):
-                    jelly.frame = frame
+                    creature = cls(80, rows)
+                height = len(frames[creature.frame])
+                width = max(cell_width(line) for line in frames[creature.frame])
+                self.assertGreaterEqual(creature.y, 2)
+                self.assertLessEqual(creature.y + height, rows - 3)
+                self.assertGreaterEqual(creature.x, 1)
+                self.assertLessEqual(creature.x + width, 79)
+                for frame in range(len(frames)):
+                    creature.frame = frame
                     for depth in (-100, 100):
-                        jelly.base_y = depth
-                        jelly.update(0, rows, 80)
-                        self.assertGreaterEqual(jelly.y, 2)
-                        self.assertLessEqual(jelly.y + len(art.JELLY_FRAMES[frame]), rows - 3)
+                        creature.base_y = depth
+                        creature.x = depth
+                        creature.update(0, rows, 80)
+                        self.assertGreaterEqual(creature.y, 2)
+                        self.assertLessEqual(creature.y + len(frames[frame]), rows - 3)
+                        self.assertGreaterEqual(creature.x, 1)
+                        self.assertLessEqual(creature.x + width, 79)
 
     def test_all_fish_preserve_sand_and_state_when_resized_without_update(self):
         for idx in range(len(art.FISH_DB)):

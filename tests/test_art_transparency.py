@@ -180,7 +180,11 @@ class ArtTransparencyTests(unittest.TestCase):
         }
         cases = [
             (entities.Crab, art.CRAB_R, [set()] * len(art.CRAB_R)),
-            (entities.Octopus, art.OCTOPUS_FRAMES, [{(1, 2), (1, 4)}] * len(art.OCTOPUS_FRAMES)),
+            (entities.Octopus, art.OCTOPUS_FRAMES, [
+                {(1, col) for col in range(6, 11)} |
+                {(2, 8)} |
+                {(3, col) for col in range(7, 10)},
+            ] * len(art.OCTOPUS_FRAMES)),
             (entities.Jellyfish, art.JELLY_FRAMES, [
                 {(1, 3), (1, 5)},
             ] * len(art.JELLY_FRAMES)),
