@@ -45,8 +45,6 @@ def _debug_creatures(species, cols, rows, spd, theme, water_top):
             lines = CRAB_R[creature.frame]
         elif species == "octopus":
             lines = OCTOPUS_FRAMES[creature.frame]
-        elif species == "eel":
-            lines = [creature.art]
         elif species == "bubble":
             lines = [creature.char]
         else:

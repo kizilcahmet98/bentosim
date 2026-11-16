@@ -7,12 +7,20 @@ Sağ-yön (`_R`) tek kaynaktır; sol-yön (`_L`) modül yüklenirken
 konumu siluetin yönünü belirler.
 """
 
+import math
+
 _MIRROR_MAP = str.maketrans({
     '(': ')', ')': '(', '<': '>', '>': '<',
     '/': '\\', '\\': '/', '[': ']', ']': '[',
     '{': '}', '}': '{', '«': '»', '»': '«',
     '‹': '›', '›': '‹', '`': '´', '´': '`',
     'b': 'd', 'd': 'b', 'p': 'q', 'q': 'p',
+})
+# Braille çizgisinin hücre içindeki iki nokta sütunu da yön değiştirmeli.
+_MIRROR_MAP.update({
+    0x2800 + mask: 0x2800 + (((mask & 0x07) << 3) | ((mask & 0x38) >> 3)
+                            | ((mask & 0x40) << 1) | ((mask & 0x80) >> 1))
+    for mask in range(256)
 })
 
 
@@ -193,18 +201,47 @@ OCTOPUS_PREVIEW = [
 
 
 # ── Deniz yılanı / yılan balığı ──
-EEL_BODY_R = "≈§≈§≈§≈§"
 EEL_HEAD_R = "º>"
+EEL_TAIL_R = "~"
+EEL_WAVE_FRAMES = 48
+_EEL_DOTS = ((1, 2, 4, 64), (8, 16, 32, 128))
 
 
-def build_eel_art(segments, right=True):
-    """Gövdeyi uzatır, tek kafayı ekler ve tüm şekli gerekirse aynalar."""
-    art = EEL_BODY_R * segments + EEL_HEAD_R
+def _eel_wave_body(body_width, phase):
+    """Üç terminal satırında, iki nokta kalınlığında kesintisiz ince eğri."""
+    masks = [[0] * body_width for _ in range(3)]
+    pixel_width = body_width * 2
+    for x in range(pixel_width):
+        distance = (pixel_width - 1 - x) / (pixel_width - 1)
+        wave = math.sin(math.pi * 2 * (distance - phase / EEL_WAVE_FRAMES))
+        y = int(round(5 + 3.4 * wave * math.sin(math.pi * distance)))
+        for dot_y in (y, y + 1):
+            masks[dot_y // 4][x // 2] |= _EEL_DOTS[x % 2][dot_y % 4]
+    return ["".join(chr(0x2800 + mask) if mask else " " for mask in row)
+            for row in masks]
+
+
+def build_eel_art(segments, right=True, phase=None):
+    """Kesintisiz ince dalga gövdesini tek küçük başla birlikte aynalar."""
+    width = 18 + 6 * (segments - 1)
+    body_width = width - len(EEL_TAIL_R) - len(EEL_HEAD_R)
+    if phase is None:
+        art = EEL_TAIL_R + "≈" * body_width + EEL_HEAD_R
+    else:
+        body = _eel_wave_body(body_width, phase)
+        lines = [" " + body[0] + "  ", EEL_TAIL_R + body[1] + EEL_HEAD_R,
+                 " " + body[2] + "  "]
+        art = "\n".join(lines)
     return art if right else _mirror(art)
 
 
-EEL_R = [build_eel_art(1)]
-EEL_L = [_mirror(line) for line in EEL_R]
+def build_eel_frames(segments, right=True):
+    """Baş/kuyruk ve genişlik sabitken gövdedeki dalgayı ilerletir."""
+    return [build_eel_art(segments, right, phase) for phase in range(EEL_WAVE_FRAMES)]
+
+
+EEL_R = build_eel_art(1).split("\n")
+EEL_L = _mirror("\n".join(EEL_R)).split("\n")
 
 
 # ── Işın balığı (manta ray) ──

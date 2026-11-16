@@ -27,6 +27,11 @@ class HudLayoutTests(unittest.TestCase):
             ((30, 120), art.OCTOPUS_FRAMES[0]), ((40, 180), art.OCTOPUS_FRAMES[0]),
             ((22, 80), art.OCTOPUS_PREVIEW), ((21, 80), None), ((12, 40), None),
         )]
+        cases += [(8, size, expected) for size, expected in (
+            ((24, 80), art.EEL_R), ((21, 80), art.EEL_R),
+            ((22, 80), art.EEL_R), ((23, 80), art.EEL_R),
+            ((30, 120), art.EEL_R), ((40, 180), art.EEL_R), ((12, 40), None),
+        )]
         for selection, size, expected in cases:
             with self.subTest(selection=selection, size=size):
                 win = mock.Mock()

@@ -21,6 +21,34 @@ class PatternedScreen:
 
 
 class ArtTransparencyTests(unittest.TestCase):
+    def test_eel_only_overwrites_its_thin_wave_path(self):
+        for segments in range(2, 6):
+            for right in (False, True):
+                with mock.patch.object(entities.random, "random", return_value=float(right)), \
+                        mock.patch.object(entities.random, "randint", side_effect=[segments, 3]):
+                    eel = entities.Eel(80, 24, 1.0)
+                for rows, cols, frame in ((r, c, f) for r, c in ((24, 80), (9, 30), (5, 18))
+                                          for f in (0, 12, 24, 36)):
+                    eel._set_frame(frame)
+                    for x in (-3, 3, cols - 4):
+                        for theme_name in ("realistic", "premium"):
+                            with self.subTest(segments=segments, right=right, size=(rows, cols),
+                                              x=x, theme=theme_name):
+                                eel.x, eel.y = x, 3
+                                before_state = vars(eel).copy()
+                                screen = PatternedScreen(rows, cols)
+                                expected = [line[:] for line in screen.cells]
+                                y = int(entities.clamp_swim_y(3, rows, eel.H))
+                                for row, line in enumerate(eel.lines):
+                                    for col, ch in enumerate(line):
+                                        if ch != " " and y + row < rows - 3 and \
+                                                0 <= x + col < cols - 1:
+                                            expected[y + row][x + col] = ch
+                                with mock.patch.object(entities, "cp", return_value=0):
+                                    eel.draw(screen, THEMES[theme_name], 0)
+                                self.assertEqual(screen.cells, expected)
+                                self.assertEqual(vars(eel), before_state)
+
     def test_turtle_shell_and_flippers_stay_solid_with_clear_limb_gaps(self):
         water_cells = ((0, 0), (0, 15), (2, 0), (2, 15), (2, 17),
                        (3, 5), (3, 6), (3, 13), (3, 14), (3, 16))

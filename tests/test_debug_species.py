@@ -4,6 +4,7 @@ from unittest import mock
 
 from bentosim.aquarium import cli, entities, sim
 from bentosim.aquarium.config import DEFAULT_CFG
+from bentosim.aquarium.themes import THEMES
 
 
 SPECIES = {
@@ -21,6 +22,22 @@ SPECIES = {
 
 
 class DebugSpeciesTests(unittest.TestCase):
+    def test_debug_eels_keep_their_three_row_wave_above_sand_on_the_first_frame(self):
+        for segments in (2, 5):
+            for right in (False, True):
+                for rows, cols in ((9, 40), (10, 80), (12, 40), (24, 80)):
+                    with self.subTest(segments=segments, right=right, size=(rows, cols)), \
+                            mock.patch.object(entities.random, "random", return_value=float(right)), \
+                            mock.patch.object(entities.random, "randint", side_effect=lambda lo, hi:
+                                              segments if (lo, hi) == (2, 5) else lo):
+                        eels = sim._debug_creatures("eel", cols, rows, 1.0, THEMES["realistic"], 3)
+                    self.assertEqual(len(eels), 3)
+                    for eel in eels:
+                        self.assertEqual(eel.H, 3)
+                        self.assertEqual(len(eel.lines), 3)
+                        self.assertGreaterEqual(eel.y, 3)
+                        self.assertLessEqual(eel.y + eel.H, rows - 3)
+
     def test_cli_passes_each_species_separately_from_settings(self):
         for species in SPECIES:
             with self.subTest(species=species):

@@ -9,6 +9,13 @@ from bentosim.core import cell_width, rgb256
 
 
 class MirrorAlignmentVisualTests(unittest.TestCase):
+    def test_braille_mirrors_the_dot_columns_inside_each_cell(self):
+        self.assertEqual(art._mirror("⠁⠂⠄⡀"), "⢀⠠⠐⠈")
+        self.assertEqual(art._mirror("⠁º>"), "<º⠈")
+        for mask in range(256):
+            char = chr(0x2800 + mask)
+            self.assertEqual(art._mirror(art._mirror(char)), char)
+
     def test_multiline_mirroring_uses_one_axis_including_empty_rows(self):
         self.assertEqual(art._mirror(" >\n>\n"), "< \n <\n  ")
         self.assertEqual(art._mirror(art._mirror(" >\n>\n")), " >\n> \n  ")
@@ -138,7 +145,8 @@ class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
 class EelVisualTests(unittest.TestCase):
     def make_eel(self, segments, right):
         with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1), \
-                mock.patch.object(entities.random, "randint", side_effect=[segments, 3]):
+                mock.patch.object(entities.random, "randint", side_effect=[segments, 3]), \
+                mock.patch.object(entities.random, "uniform", side_effect=[0.1, 0.0]):
             return entities.Eel(80, 24, 1.0)
 
     def test_long_eel_has_one_head_and_mirrors_as_a_whole(self):
@@ -148,14 +156,103 @@ class EelVisualTests(unittest.TestCase):
                 left = self.make_eel(segments, False)
                 self.assertEqual(right.art.count("º"), 1)
                 self.assertEqual(left.art.count("º"), 1)
-                self.assertEqual(right.art.count(">"), 1)
-                self.assertEqual(left.art.count("<"), 1)
-                self.assertTrue(right.art.endswith("º>"))
-                self.assertTrue(left.art.startswith("<º"))
-                self.assertEqual(right.art.count("§"), 4 * segments)
-                self.assertEqual(right.W, 8 * segments + 2)
+                self.assertTrue(right.lines[1].endswith(art.EEL_HEAD_R))
+                self.assertTrue(left.lines[1].startswith(art._mirror(art.EEL_HEAD_R)))
+                self.assertTrue(right.lines[1].startswith(art.EEL_TAIL_R))
+                self.assertEqual(right.H, 3)
+                self.assertEqual(right.W, 18 + 6 * (segments - 1))
+                self.assertTrue(all(cell_width(line) == right.W for line in right.lines))
+                self.assertTrue(all(cell_width(line) == left.W for line in left.lines))
                 self.assertEqual(left.W, right.W)
                 self.assertEqual(left.art, art._mirror(right.art))
+                self.assertEqual(art._mirror(left.art), right.art)
+                for rframe, lframe in zip(right.frames, left.frames):
+                    lines = rframe.split("\n")
+                    self.assertEqual(len(lines), 3)
+                    self.assertTrue(all(cell_width(line) == right.W for line in lines))
+                    self.assertEqual(rframe.count("º"), 1)
+                    self.assertTrue(lines[1].startswith(art.EEL_TAIL_R))
+                    self.assertTrue(lines[1].endswith(art.EEL_HEAD_R))
+                    self.assertEqual(art._mirror(rframe), lframe)
+
+    def render(self, eel, t=0):
+        win = mock.Mock()
+        win.getmaxyx.return_value = (24, 120)
+        with mock.patch.object(entities, "cp", return_value=0):
+            eel.draw(win, THEMES["realistic"], t)
+        return {(y - int(eel.y), x - int(eel.x) + offset): ch
+                for (y, x, text, attr), _ in win.addstr.call_args_list
+                for offset, ch in enumerate(text)}
+
+    def test_wave_moves_from_head_to_tail_and_returns_after_1_6_seconds(self):
+        for segments in range(2, 6):
+            for right in (False, True):
+                with self.subTest(segments=segments, right=right):
+                    eel = self.make_eel(segments, right)
+                    eel.x, eel.y = 3, 3
+                    initial = self.render(eel)
+                    trough_centers = {}
+                    previous_columns = None
+                    seen = set()
+                    for tick in range(49):
+                        if tick:
+                            eel.update(tick / 30, 24, 120, 1.0)
+                            eel.x, eel.y = 3, 3
+                        drawn = self.render(eel)
+                        self.assertEqual({col for row, col in drawn}, set(range(eel.W)))
+                        self.assertEqual(eel.frame, tick % 48)
+                        canonical = drawn if right else {
+                            (row, eel.W - 1 - col): ch.translate(art._MIRROR_MAP)
+                            for (row, col), ch in drawn.items()}
+                        self.assertEqual(canonical[1, 0], "~")
+                        self.assertEqual(canonical[1, eel.W - 2], "º")
+                        self.assertEqual(canonical[1, eel.W - 1], ">")
+                        dots = set()
+                        dot_positions = ((0, 0, 1), (0, 1, 2), (0, 2, 4), (0, 3, 64),
+                                         (1, 0, 8), (1, 1, 16), (1, 2, 32), (1, 3, 128))
+                        for (row, col), char in canonical.items():
+                            mask = ord(char) - 0x2800
+                            if 0 <= mask < 256:
+                                for dx, dy, bit in dot_positions:
+                                    if mask & bit:
+                                        dots.add(((col - 1) * 2 + dx, row * 4 + dy))
+                        pixel_width = (eel.W - 3) * 2
+                        self.assertEqual({x for x, y in dots}, set(range(pixel_width)))
+                        columns = [sorted(y for px, y in dots if px == x)
+                                   for x in range(pixel_width)]
+                        # İnce, deliksiz eğri: her nokta sütununda aynı iki bit.
+                        self.assertTrue(all(len(ys) == 2 and ys[1] == ys[0] + 1
+                                            for ys in columns))
+                        self.assertEqual(columns[0], [5, 6])
+                        self.assertEqual(columns[-1], [5, 6])
+                        self.assertTrue(all(abs(columns[x + 1][0] - columns[x][0]) <= 1
+                                            for x in range(pixel_width - 1)))
+                        if previous_columns is not None:
+                            # Kareler arasında tam satır değil, en fazla bir nokta ilerler.
+                            self.assertTrue(all(abs(ys[0] - old[0]) <= 1
+                                                for ys, old in zip(columns, previous_columns)))
+                        previous_columns = columns
+                        if eel.frame in (0, 12, 24):
+                            trough = [x for x, y in dots if y >= 8]
+                            self.assertTrue(trough)
+                            trough_centers[eel.frame] = sum(trough) / len(trough)
+                        seen.add(tuple(sorted(drawn.items())))
+                    # Sağdaki baştan soldaki kuyruğa ilerleyen gerçek alt kıvrım.
+                    self.assertGreater(trough_centers[0], trough_centers[12])
+                    self.assertGreater(trough_centers[12], trough_centers[24])
+                    self.assertEqual(len(seen), 48)
+                    self.assertEqual(self.render(eel), initial)
+
+    def test_drawing_does_not_advance_the_wave_or_behavior_randomness(self):
+        for right in (False, True):
+            eel = self.make_eel(5, right)
+            eel.x, eel.y = 3, 3
+            before, rng = copy.deepcopy(vars(eel)), entities.random.getstate()
+            initial = self.render(eel)
+            for t in (0, 10, 1000, 100000):
+                self.assertEqual(self.render(eel, t), initial)
+            self.assertEqual(vars(eel), before)
+            self.assertEqual(entities.random.getstate(), rng)
 
     def test_drawing_preserves_shape_and_clips_at_both_edges(self):
         for segments in range(2, 6):
@@ -170,9 +267,14 @@ class EelVisualTests(unittest.TestCase):
                             with mock.patch.object(entities, "cp", return_value=7) as color:
                                 eel.draw(win, THEMES[theme_name], 0)
                             # 24 sütunlu pencerede son sütun safeadd tarafından ayrılır.
-                            expected = "".join(
-                                ch for i, ch in enumerate(eel.art) if 0 <= x + i < 23)
-                            win.addstr.assert_called_once_with(2, max(0, x), expected, 7)
+                            expected = {(2 + row, x + col): ch
+                                        for row, line in enumerate(eel.lines)
+                                        for col, ch in enumerate(line)
+                                        if ch != " " and 0 <= x + col < 23}
+                            drawn = {(y, col + offset): ch
+                                     for (y, col, text, attr), _ in win.addstr.call_args_list
+                                     for offset, ch in enumerate(text)}
+                            self.assertEqual(drawn, expected)
                             color.assert_called_once_with(THEMES[theme_name]["eel"], bold=True)
 
 
@@ -574,7 +676,7 @@ class OctopusSilhouetteVisualTests(unittest.TestCase):
 
 
 class SwimmingBoundsVisualTests(unittest.TestCase):
-    CLASSES = (entities.Shark, entities.Whale, entities.Turtle, entities.MantaRay)
+    CLASSES = (entities.Shark, entities.Whale, entities.Turtle, entities.MantaRay, entities.Eel)
 
     def test_jellyfish_and_octopus_fit_spawn_and_update_bounds(self):
         cases = ((entities.Jellyfish, art.JELLY_FRAMES),
@@ -627,7 +729,9 @@ class SwimmingBoundsVisualTests(unittest.TestCase):
         cases = [(cls, right) for cls in self.CLASSES for right in (False, True)]
         for cls, right in cases:
             art_name = "RAY" if cls is entities.MantaRay else cls.__name__.upper()
-            height = len(getattr(art, art_name + "_R"))
+            lines = (art.build_eel_frames(2)[0].split("\n") if cls is entities.Eel
+                     else getattr(art, art_name + "_R"))
+            height = len(lines)
             for rows in (height + 5, 24, 40):
                 with self.subTest(creature=cls.__name__, rows=rows, right=right):
                     # En derin doğma konumunu seç.

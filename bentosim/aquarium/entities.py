@@ -26,7 +26,7 @@ from .art import (
     TURTLE_R, TURTLE_L, TURTLE_FRAMES_R, TURTLE_FRAMES_L,
     CRAB_R, CRAB_L,
     OCTOPUS_BODY, OCTOPUS_FRAMES,
-    build_eel_art,
+    build_eel_frames,
     RAY_R, RAY_L, RAY_FRAMES_R, RAY_FRAMES_L,
     JELLY_BELL, JELLY_FRAMES,
     BUBBLE_CHARS,
@@ -734,28 +734,45 @@ class Octopus(Entity):
 # ════════════════════════════════════════════════════════════════
 
 class Eel(Entity):
+    FRAME_TICKS = 1  # 30 Hz saatinde 48 fazlı, 1,6 saniyelik ince S dalgası.
+
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right = random.random()>0.5
         # Dinamik uzunluk
         seg = random.randint(2,5)
-        self.art = build_eel_art(seg, self.right)
-        self.W = len(self.art)
+        self.frames = build_eel_frames(seg, self.right)
+        self.art = self.frames[0]
+        self.lines = self.art.split("\n")
+        self.W = max(cell_width(line) for line in self.lines)
+        self.H = len(self.lines)
         self.x = float(-self.W-5 if self.right else cols+self.W+5)
-        self.base_y = float(random.randint(3,max(4,rows-6)))
+        self.base_y = clamp_swim_y(
+            float(random.randint(3, max(4, rows - 3 - self.H))), rows, self.H)
         self.y = self.base_y
         self.dx = random.uniform(0.06,0.18)*spd_mult*(1 if self.right else -1)
         self.phase = random.uniform(0,math.pi*2)
+        cycle_ticks = self.FRAME_TICKS * len(self.frames)
+        self.stroke_tick = int(self.phase / (math.pi * 2) * cycle_ticks) % cycle_ticks
+        self._set_frame(self.stroke_tick // self.FRAME_TICKS)
+
+    def _set_frame(self, frame):
+        self.frame = frame
+        self.art = self.frames[frame]
+        self.lines = self.art.split("\n")
 
     def update(self, t, rows, cols, spd_mult):
         self.x += self.dx
         self.y = self.base_y + math.sin(t*0.07+self.phase)*1.5
-        self.y = max(2.0,min(float(rows-5),self.y))
+        self.y = clamp_swim_y(self.y, rows, self.H)
         if self.x>cols+self.W+10 or self.x<-self.W-10: self.dead=True
+        self.stroke_tick = (self.stroke_tick + 1) % (self.FRAME_TICKS * len(self.frames))
+        if self.stroke_tick % self.FRAME_TICKS == 0:
+            self._set_frame(self.stroke_tick // self.FRAME_TICKS)
 
     def draw(self, win, theme, t):
         attr=cp(theme["eel"],bold=True)
-        draw_swimming_art(win, self.y, self.x, [self.art], attr)
+        draw_swimming_art(win, self.y, self.x, self.lines, attr)
 
 # ════════════════════════════════════════════════════════════════
 #  IŞIN BALIĞI (MANTA RAY)
