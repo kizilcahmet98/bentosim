@@ -69,14 +69,20 @@ class CrabTests(unittest.TestCase):
     def test_feet_follow_resized_ground_without_mutating_paused_state(self):
         crab = entities.Crab(80, 24, 1.0)
         crab.x = 60
-        before = vars(crab).copy()
-        for rows, cols in ((32, 80), (12, 20), (24, 80)):
-            screen = Grid(rows, cols)
-            with mock.patch.object(entities, "cp", return_value=0):
-                crab.draw(screen, THEMES["realistic"], 0)
-            feet = "".join(screen.cells[rows-3])
-            self.assertIn("_|_", feet)
-            self.assertEqual(vars(crab), before)
+        for right in (False, True):
+            crab.right = right
+            for frame, lines in enumerate(art.CRAB_R if right else art.CRAB_L):
+                crab.frame = frame
+                before = vars(crab).copy()
+                for rows, cols in ((32, 80), (12, 20), (4, 10), (24, 80)):
+                    screen = Grid(rows, cols)
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        crab.draw(screen, THEMES["realistic"], 0)
+                    x = int(max(1, min(cols - crab.W - 1, crab.x)))
+                    feet = lines[-1][:max(0, cols - 1 - x)]
+                    self.assertEqual("".join(screen.cells[rows-3][x:x+len(feet)]), feet)
+                    self.assertTrue(all(ch == " " for row in screen.cells[-2:] for ch in row))
+                    self.assertEqual(vars(crab), before)
 
 
 class SwimmingResizeTests(unittest.TestCase):

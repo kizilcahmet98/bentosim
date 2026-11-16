@@ -632,8 +632,10 @@ class Crab(Entity):
     def __init__(self, cols, rows, spd_mult):
         super().__init__()
         self.right = random.random() > 0.5
-        self.x = float(random.randint(2, max(3,cols-10)))
-        self.y = float(rows-4)
+        self.W = max(cell_width(line) for frame in CRAB_R for line in frame)
+        self.H = len(CRAB_R[0])
+        self.x = float(random.randint(2, max(3, cols - self.W - 1)))
+        self.y = float(rows - self.H - 2)
         base_spd = random.uniform(0.04,0.14)
         self.dx = base_spd*spd_mult*(1 if self.right else -1)
         self.nom_spd = base_spd
@@ -663,18 +665,18 @@ class Crab(Entity):
             self.dx=abs(self.dx)*(1 if self.right else -1)
             self.dir_cd=random.randint(60,140)
         self.x+=self.dx
-        self.x=max(1.0,min(float(cols-10),self.x))
+        self.x=max(1.0,min(float(cols-self.W-1),self.x))
         self.fcd-=1
         if self.fcd<=0: self.frame^=1; self.fcd=random.randint(10,20)
-        self.y=float(rows-4)  # kumda kal
+        self.y=float(rows-self.H-2)  # son bacak satırı kumun üst sınırında
 
     def draw(self, win, theme, t):
         attr=cp(theme["crab"],bold=True)
         frames=CRAB_R if self.right else CRAB_L
         rows, cols = win.getmaxyx()
-        x = max(1.0, min(float(cols - 10), self.x))
-        draw_art_shape(win, rows - 4, x, frames[self.frame], attr,
-                       solid_rows=(0, 1))
+        x = max(1.0, min(float(cols - self.W - 1), self.x))
+        draw_art_shape(win, rows - self.H - 2, x, frames[self.frame], attr,
+                       solid_rows=(2,))
 
 # ════════════════════════════════════════════════════════════════
 #  AHTAPOT

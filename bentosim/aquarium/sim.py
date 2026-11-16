@@ -51,8 +51,6 @@ def _debug_creatures(species, cols, rows, spd, theme, water_top):
             lines = creature.lines
         width = max(cell_width(line) for line in lines)
         max_x = cols - 1 - width
-        if species == "crab":
-            max_x = min(max_x, cols - 10)
         if max_x >= 0:
             creature.x = max_x * index / 2
         else:
@@ -64,7 +62,7 @@ def _debug_creatures(species, cols, rows, spd, theme, water_top):
         max_y = max(water_top, rows - 3 - len(lines))
         creature.y = water_top + (max_y - water_top) * index / 2
         if species == "crab":
-            creature.y = float(rows - 4)
+            creature.y = float(rows - len(lines) - 2)
         if hasattr(creature, "base_y"):
             creature.base_y = creature.y
         if hasattr(creature, "target_y"):

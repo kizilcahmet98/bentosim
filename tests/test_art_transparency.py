@@ -248,8 +248,8 @@ class ArtTransparencyTests(unittest.TestCase):
                                     if cls is entities.Crab:
                                         # Yengecin görsel konumu yeniden boyutlandırmada
                                         # mevcut pencerenin zeminine ve kenarlarına bağlıdır.
-                                        draw_x = max(1, min(cols - 10, x))
-                                        draw_y = rows - 4
+                                        draw_x = max(1, min(cols - creature.W - 1, x))
+                                        draw_y = rows - len(lines) - 2
                                     else:
                                         draw_y = int(entities.clamp_swim_y(creature.y, rows, len(lines)))
                                     screen = PatternedScreen(rows, cols)

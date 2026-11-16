@@ -161,10 +161,21 @@ TURTLE_PREVIEW = _pad_art("\n".join(TURTLE_PREVIEW)).split("\n")
 
 # ── Yengeç (animasyonlu) ──
 CRAB_R = [
-    [" /o/ ", " _|_ "],
-    [" (o) ", " _|_ "],
+    [
+        " _         _ ",
+        "/ )  · ·  ( \\",
+        "\\(_.(---)._)/",
+        " _/ /   \\ \\_ ",
+    ],
+    [
+        " _         _ ",
+        "/ )  · ·  ( \\",
+        "\\(_.(---)._)/",
+        " /_/     \\_\\ ",
+    ],
 ]
-CRAB_L = [[_mirror(line) for line in frame] for frame in CRAB_R]
+CRAB_R = [_pad_art("\n".join(frame)).split("\n") for frame in CRAB_R]
+CRAB_L = [_mirror("\n".join(frame)).split("\n") for frame in CRAB_R]
 
 
 # ── Ahtapot (yön ayrımı yok) ──

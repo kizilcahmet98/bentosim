@@ -142,6 +142,39 @@ class LargeCreatureSilhouetteVisualTests(unittest.TestCase):
                             self.assertTrue(all(ch == "#" for line in cells[-3:] for ch in line))
 
 
+class CrabVisualTests(unittest.TestCase):
+    def test_shell_eyes_and_claws_stay_fixed_while_feet_step(self):
+        for right in (False, True):
+            with self.subTest(right=right):
+                with mock.patch.object(entities.random, "random", return_value=float(right)):
+                    crab = entities.Crab(80, 24, 1.0)
+                crab.x = 3
+                crab.dash_cd = crab.dir_cd = 1000
+                upper_body = None
+                feet = set()
+                for tick in range(61):
+                    win = mock.Mock()
+                    win.getmaxyx.return_value = (24, 80)
+                    before = copy.deepcopy(vars(crab))
+                    rng = entities.random.getstate()
+                    with mock.patch.object(entities, "cp", return_value=0):
+                        crab.draw(win, THEMES["realistic"], tick / 30)
+                    cells = {(y - (24 - crab.H - 2), x - int(crab.x) + offset): ch
+                             for (y, x, text, attr), _ in win.addstr.call_args_list
+                             for offset, ch in enumerate(text)}
+                    head = {pos: ch for pos, ch in cells.items() if pos[0] < crab.H - 1}
+                    if upper_body is None:
+                        upper_body = head
+                    self.assertEqual(head, upper_body)
+                    self.assertEqual(sum(ch == "·" for ch in head.values()), 2)
+                    feet.add(tuple(sorted((pos, ch) for pos, ch in cells.items()
+                                          if pos[0] == crab.H - 1)))
+                    self.assertEqual(vars(crab), before)
+                    self.assertEqual(entities.random.getstate(), rng)
+                    crab.update(tick / 30, 24, 80, 1.0)
+                self.assertEqual(len(feet), 2)
+
+
 class EelVisualTests(unittest.TestCase):
     def make_eel(self, segments, right):
         with mock.patch.object(entities.random, "random", return_value=0.9 if right else 0.1), \
@@ -788,13 +821,13 @@ class SwimmingBoundsVisualTests(unittest.TestCase):
         crab = entities.Crab(80, 24, 1.0)
         for rows in (24, 12, 32):
             crab.update(0, rows, 80, 1.0)
-            self.assertEqual(crab.y, rows - 4)
+            self.assertEqual(crab.y, rows - crab.H - 2)
             win = mock.Mock()
             win.getmaxyx.return_value = (rows, 80)
             with mock.patch.object(entities, "cp", return_value=0):
                 crab.draw(win, THEMES["realistic"], 0)
-            self.assertEqual([call[0][0] for call in win.addstr.call_args_list],
-                             [rows - 4, rows - 3])
+            self.assertEqual({call[0][0] for call in win.addstr.call_args_list},
+                             set(range(rows - crab.H - 2, rows - 2)))
 
 
 if __name__ == "__main__":
