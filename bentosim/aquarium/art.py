@@ -61,11 +61,11 @@ _FISH_RAW = [
     ("  · · ·  \n>={{{{{(*>",   "L", "dev"),
     ("><≛≛≛≛≛º>\n   ~·~   ",    "L", "balina"),
     # ── Egzotik ──
-    ("»=»=»>",           "X", "hızlı"),
+    ("><==°>",           "X", "hızlı"),
     ("-~-~-*>",          "X", "yılan"),
     ("><(({°})>",        "X", "balon"),
     ("·´`·><*>",         "X", "parlayan"),
-    (">·>·>·>",          "X", "şerit"),
+    ("><(=°)>",          "X", "şerit"),
 ]
 
 FISH_DB = [(_pad_art(r), _mirror(r), sz, name) for r, sz, name in _FISH_RAW]
